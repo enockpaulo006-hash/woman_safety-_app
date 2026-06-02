@@ -1,0 +1,153 @@
+{% extends "admin_portal/base.html" %}
+
+{% block extra_head %}
+<link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIINfQF2wzzF6sllgCf6xEe9fVLv3YH3z2w="
+    crossorigin=""
+>
+{% endblock %}
+
+{% block page_actions %}
+<span class="portal-chip portal-chip-strong">Approved reports only</span>
+<span class="portal-chip">{{ hotspot_total }} mapped incidents</span>
+<span class="portal-chip">Category and location type slicing</span>
+{% endblock %}
+
+{% block content %}
+{{ hotspot_reports|json_script:"portal-hotspot-data" }}
+<section class="portal-layout portal-layout-2col-strong">
+    <article class="portal-card">
+        <div class="portal-section-heading">
+            <div>
+                <p class="portal-card-label">Deliverable 2</p>
+                <h3>Live GIS hotspot mapping workspace</h3>
+            </div>
+            <div class="portal-filter-pills">
+                <a class="portal-chip {% if selected_time_bucket == 'all' %}portal-chip-strong{% endif %}" href="{% url 'admin-hotspot-map' %}">All time</a>
+                <a class="portal-chip {% if selected_time_bucket == 'morning' %}portal-chip-strong{% endif %}" href="{% url 'admin-hotspot-map' %}?time_bucket=morning">Morning</a>
+                <a class="portal-chip {% if selected_time_bucket == 'evening' %}portal-chip-strong{% endif %}" href="{% url 'admin-hotspot-map' %}?time_bucket=evening">Evening</a>
+            </div>
+        </div>
+
+        <form class="portal-filter-row" method="get">
+            <div class="portal-filter-box">
+                <label for="map-category-filter">Category</label>
+                <select id="map-category-filter" name="category">
+                    <option value="all">All categories</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}" {% if selected_category == category.id|stringformat:"s" %}selected{% endif %}>{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="portal-filter-box">
+                <label for="map-location-filter">Location Type</label>
+                <select id="map-location-filter" name="location_type">
+                    <option value="all">All locations</option>
+                    {% for location_type in location_types %}
+                    <option value="{{ location_type.id }}" {% if selected_location_type == location_type.id|stringformat:"s" %}selected{% endif %}>{{ location_type.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="portal-filter-box">
+                <label for="map-time-filter">Time of day</label>
+                <select id="map-time-filter" name="time_bucket">
+                    <option value="all" {% if selected_time_bucket == "all" %}selected{% endif %}>All day</option>
+                    <option value="morning" {% if selected_time_bucket == "morning" %}selected{% endif %}>Morning</option>
+                    <option value="afternoon" {% if selected_time_bucket == "afternoon" %}selected{% endif %}>Afternoon</option>
+                    <option value="evening" {% if selected_time_bucket == "evening" %}selected{% endif %}>Evening</option>
+                    <option value="night" {% if selected_time_bucket == "night" %}selected{% endif %}>Night</option>
+                </select>
+            </div>
+            <div class="portal-filter-box">
+                <label for="map-date-from">From</label>
+                <input id="map-date-from" type="date" name="date_from" value="{{ selected_date_from }}">
+            </div>
+            <div class="portal-filter-box">
+                <label for="map-date-to">To</label>
+                <input id="map-date-to" type="date" name="date_to" value="{{ selected_date_to }}">
+            </div>
+            <button class="portal-filter-submit" type="submit">Apply filters</button>
+        </form>
+
+        <div class="portal-map-placeholder portal-real-map-stage">
+            <div id="portal-leaflet-map" class="portal-leaflet-map" data-hotspot-map></div>
+            <button type="button" class="portal-map-maximize" data-map-maximize aria-label="Maximize map">
+                Maximize map
+            </button>
+            <div class="portal-map-empty" data-hotspot-empty>
+                <strong>No approved reports to map yet</strong>
+                <p>Approve incident reports in moderation, then return here.</p>
+            </div>
+            <div class="portal-map-legend">
+                <span><i class="portal-legend-dot is-soft"></i> morning</span>
+                <span><i class="portal-legend-dot is-mid"></i> afternoon/evening</span>
+                <span><i class="portal-legend-dot is-strong"></i> night</span>
+            </div>
+        </div>
+
+        <div class="portal-insight-grid">
+            <article class="portal-signal-card">
+                <span>Mapped reports</span>
+                <strong>{{ hotspot_total }}</strong>
+                <p>Only approved incidents are included in the hotspot view.</p>
+            </article>
+            <article class="portal-signal-card">
+                <span>Morning</span>
+                <strong>{{ time_counts.morning }}</strong>
+                <p>Incidents reported from 05:00 to 11:59.</p>
+            </article>
+            <article class="portal-signal-card">
+                <span>Evening</span>
+                <strong>{{ time_counts.evening }}</strong>
+                <p>Incidents reported from 17:00 to 20:59.</p>
+            </article>
+        </div>
+    </article>
+
+    <div class="portal-section-stack">
+        <article class="portal-card portal-card-highlight">
+            <p class="portal-card-label">Top Hotspot Areas</p>
+            <h3>Where approved incidents cluster</h3>
+            <div class="portal-module-list">
+                {% for area in top_areas %}
+                <div class="portal-module-row">
+                    <strong>{{ area.label }}</strong>
+                    <span>{{ area.count }} approved report{{ area.count|pluralize }}</span>
+                </div>
+                {% empty %}
+                <div class="portal-module-row">
+                    <strong>No areas yet</strong>
+                    <span>Approve reports with location data to populate this list.</span>
+                </div>
+                {% endfor %}
+            </div>
+        </article>
+        <article class="portal-card">
+            <p class="portal-card-label">Category Hotspots</p>
+            <div class="portal-module-list">
+                {% for category in top_categories %}
+                <div class="portal-module-row">
+                    <strong>{{ category.label }}</strong>
+                    <span>{{ category.count }} approved report{{ category.count|pluralize }}</span>
+                </div>
+                {% empty %}
+                <div class="portal-module-row">
+                    <strong>No categories yet</strong>
+                    <span>Approved reports will be grouped here.</span>
+                </div>
+                {% endfor %}
+            </div>
+        </article>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+></script>
+{% endblock %}

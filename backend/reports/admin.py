@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import IncidentCategory, IncidentReport, LocationType
+from .models import IncidentCategory, IncidentReport, LocationType, ReportStatusHistory
 
 
 @admin.register(IncidentCategory)
@@ -37,3 +37,20 @@ class IncidentReportAdmin(admin.ModelAdmin):
     )
     autocomplete_fields = ("category", "location_type", "duplicate_of_report")
     ordering = ("-reported_at",)
+
+
+@admin.register(ReportStatusHistory)
+class ReportStatusHistoryAdmin(admin.ModelAdmin):
+    list_display = (
+        "report",
+        "previous_status",
+        "new_status",
+        "changed_at",
+    )
+    list_filter = ("new_status", "changed_at")
+    search_fields = (
+        "report__public_reference",
+        "moderation_note",
+    )
+    autocomplete_fields = ("report",)
+    ordering = ("-changed_at",)

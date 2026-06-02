@@ -2,10 +2,17 @@ import 'package:flutter/material.dart';
 
 import '../../../core/settings/app_settings_scope.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../auth/data/models/auth_session.dart';
 import 'registration_page.dart';
+import 'sign_in_page.dart';
 
 class WelcomePage extends StatelessWidget {
-  const WelcomePage({super.key});
+  const WelcomePage({
+    required this.onAuthenticated,
+    super.key,
+  });
+
+  final Future<void> Function(AuthSession) onAuthenticated;
 
   @override
   Widget build(BuildContext context) {
@@ -77,11 +84,45 @@ class WelcomePage extends StatelessWidget {
                     onPressed: () {
                       Navigator.of(context).push(
                         MaterialPageRoute<void>(
-                          builder: (_) => const RegistrationPage(),
+                          builder: (_) => RegistrationPage(
+                            onAuthenticated: onAuthenticated,
+                          ),
                         ),
                       );
                     },
-                    child: Text(strings.text('getStarted')),
+                    child: Text(strings.text('signUp')),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => SignInPage(
+                            onAuthenticated: onAuthenticated,
+                          ),
+                        ),
+                      );
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      backgroundColor: Colors.white.withValues(alpha: 0.06),
+                      side: BorderSide(
+                        color: Colors.white.withValues(alpha: 0.35),
+                      ),
+                    ),
+                    child: Text(strings.text('signIn')),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextButton.icon(
+                  onPressed: () => _showBackendServerDialog(context),
+                  icon: const Icon(Icons.router_outlined, color: Colors.white),
+                  label: Text(
+                    strings.text('serverSettingsButton'),
+                    style: const TextStyle(color: Colors.white),
                   ),
                 ),
               ],
@@ -91,6 +132,86 @@ class WelcomePage extends StatelessWidget {
       ),
     );
   }
+}
+
+Future<void> _showBackendServerDialog(BuildContext context) async {
+  final settings = AppSettingsScope.readControllerOf(context);
+  final strings = AppSettingsScope.readStringsOf(context);
+  final visuals = context.appVisuals;
+  final controller = TextEditingController(text: settings.backendUrl);
+
+  await showDialog<void>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: Text(strings.text('backendServerTitle')),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              strings.text('backendServerSubtitle'),
+              style: Theme.of(dialogContext).textTheme.bodyMedium?.copyWith(
+                color: visuals.muted,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.url,
+              decoration: InputDecoration(
+                labelText: strings.text('backendUrlLabel'),
+                hintText: strings.text('backendUrlHint'),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              strings.text('backendWifiHelp'),
+              style: Theme.of(dialogContext).textTheme.bodySmall?.copyWith(
+                color: visuals.muted,
+                height: 1.45,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(strings.text('cancel')),
+          ),
+          FilledButton(
+            onPressed: () async {
+              try {
+                await settings.setBackendUrl(controller.text);
+                if (!context.mounted) {
+                  return;
+                }
+                Navigator.of(dialogContext).pop();
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(
+                  SnackBar(content: Text(strings.text('backendUrlSaved'))),
+                );
+              } on FormatException {
+                if (!context.mounted) {
+                  return;
+                }
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(
+                  SnackBar(content: Text(strings.text('backendUrlInvalid'))),
+                );
+              }
+            },
+            child: Text(strings.text('saveBackendUrl')),
+          ),
+        ],
+      );
+    },
+  );
+
+  controller.dispose();
 }
 
 class _WelcomeArtwork extends StatelessWidget {

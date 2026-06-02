@@ -18,6 +18,19 @@ class ReportingApiService {
 
   Uri _uri(String path) => Uri.parse("${ApiConfig.baseUrl}$path");
 
+  Future<bool> isBackendAvailable() async {
+    final response = await _client
+        .get(_uri("/health/"))
+        .timeout(_requestTimeout);
+
+    if (response.statusCode != 200) {
+      return false;
+    }
+
+    final body = _decodeResponse(response);
+    return body is Map<String, dynamic> && body["status"] == "ok";
+  }
+
   Future<List<IncidentCategory>> fetchIncidentCategories() async {
     final response = await _client
         .get(_uri("/taxonomies/incident-categories/"))

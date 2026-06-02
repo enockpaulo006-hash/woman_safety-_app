@@ -21,5 +21,7 @@ from reports.views import api_home
 urlpatterns = [
     path("", api_home, name="api-home"),
     path('admin/', admin.site.urls),
+    path("portal/", include("admin_portal.urls")),
+    path("api/v1/auth/", include("accounts.urls")),
     path("api/v1/", include("reports.urls")),
 ]

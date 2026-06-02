@@ -1,0 +1,71 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ page_title }} | Women Safety Portal</title>
+    <link rel="stylesheet" href="{% static 'admin_portal/css/portal.css' %}">
+</head>
+<body class="portal-auth-page">
+    <main class="portal-auth-shell">
+       <!-- <section class="portal-auth-brand">
+           
+          <h1>Women Safety Portal</h1>
+            <p class="portal-auth-copy">
+                Sign in with a staff account. The portal will show only the steps
+                assigned to your role: moderation, hotspot analysis, monthly briefs,
+                or privacy review.
+            </p>
+            <div class="portal-chip-row">
+                <span class="portal-chip portal-chip-strong">Staff-only portal</span>
+                <span class="portal-chip">Role-based access</span>
+            </div> 
+        </section> -->
+        <section class="portal-auth-card">
+            <p class="portal-card-label">Women Safety Portal</p>
+            <h2>Portal Sign In</h2>
+            <form method="post" class="portal-auth-form">
+                {% csrf_token %}
+                {% if next_url %}
+                <input type="hidden" name="next" value="{{ next_url }}">
+                {% endif %}
+
+                {% if form.non_field_errors %}
+                <div class="portal-form-alert">
+                    {% for error in form.non_field_errors %}
+                    <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <div class="portal-form-grid">
+                    <div class="portal-form-field">
+                        <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+                        {{ form.username }}
+                        {% if form.username.errors %}
+                        <div class="portal-field-error">
+                            {% for error in form.username.errors %}
+                            <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="portal-form-field">
+                        <label for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+                        {{ form.password }}
+                        {% if form.password.errors %}
+                        <div class="portal-field-error">
+                            {% for error in form.password.errors %}
+                            <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <button type="submit" class="portal-auth-submit">Enter Portal</button>
+            </form>
+        </section>
+    </main>
+</body>
+</html>

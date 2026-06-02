@@ -15,11 +15,19 @@ class AppStrings {
       'welcomeSubtitle': 'Start your daily commute safe and secure',
       'getStarted': 'Get Started',
       'registrationTitle': 'Create your profile',
+      'registrationHint':
+          'Create your account once, then sign in on any phone later.',
+      'signInTitle': 'Sign in to your account',
+      'signInSubtitle':
+          'Use the email and password you registered with to continue on this phone.',
       'fullName': 'FULL NAME',
       'email': 'EMAIL',
       'password': 'PASSWORD',
       'confirmPassword': 'CONFIRM PASSWORD',
       'signUp': 'Sign Up',
+      'signIn': 'Sign In',
+      'continueWithGoogle': 'Continue with Google',
+      'orContinueWith': 'Or continue with',
       'fullNameRequired': 'Enter the full name.',
       'fullNameShort': 'Full name is too short.',
       'emailRequired': 'Enter the email address.',
@@ -28,11 +36,12 @@ class AppStrings {
       'passwordShort': 'Use at least 6 characters.',
       'confirmPasswordRequired': 'Confirm the password.',
       'passwordMismatch': 'Passwords do not match.',
+      'cancel': 'Cancel',
       'registrationReady': 'Welcome {name}, your registration is ready.',
       'homeTitle': 'Move Safety',
       'homeSubtitle': 'Daily reporting tools in one place.',
       'offline': 'Offline',
-      'live': 'Live',
+      'live': 'Online',
       'homeOverviewTitle': 'Today\'s overview',
       'homeOverviewOffline':
           'The app is currently ready to collect reports offline.',
@@ -46,6 +55,26 @@ class AppStrings {
       'report': 'Report',
       'guide': 'Guide',
       'sync': 'Sync',
+      'sos': 'SOS',
+      'sosSubtitle': 'Quick help tools for immediate danger or urgent support.',
+      'sosActionTitle': 'Need urgent help right now?',
+      'sosActionBody':
+          'Tap the SOS action to copy a ready message. The app will attach your current location when it can, so you can paste it into a call, SMS, or WhatsApp chat fast.',
+      'sosPrimaryAction': 'Copy SOS message',
+      'sosReadyTitle': 'SOS message ready',
+      'sosReadyBody':
+          'Paste this message into a call, SMS, or WhatsApp chat to ask for help quickly.',
+      'sosLocationAttached': 'Current location added',
+      'sosLocationMissing': 'Location could not be added',
+      'sosCopiedWithLocation': 'SOS message copied with current location.',
+      'sosCopiedWithoutLocation':
+          'SOS message copied. Location was not added.',
+      'sosActivationFailed':
+          'Could not prepare the SOS message. Please try again.',
+      'sosMessageWithLocation':
+          'SOS! I need urgent help right now. My approximate location is {lat}, {lng}. Please contact me or emergency support immediately.',
+      'sosMessageNoLocation':
+          'SOS! I need urgent help right now. Please contact me or emergency support immediately.',
       'emergencyGuidance': 'Emergency guidance',
       'emergencyGuidanceBody':
           'If someone is in immediate danger, contact emergency services or a trusted responder first. Use reporting right after you are safe.',
@@ -68,6 +97,19 @@ class AppStrings {
       'settingsTitle': 'Settings',
       'settingsSubtitle':
           'Control language, display mode, reminders, and how the app behaves offline.',
+      'backendServerTitle': 'Backend server',
+      'backendServerSubtitle':
+          'Update this address whenever your computer joins a different Wi-Fi network.',
+      'backendUrlLabel': 'Backend URL',
+      'backendUrlHint': 'http://172.17.16.69:8000/api/v1',
+      'backendWifiHelp':
+          'On Wi-Fi, use your computer IP, for example http://172.17.16.69:8000/api/v1.',
+      'backendUsbHelp':
+          'On USB, you can use http://127.0.0.1:8000/api/v1 after adb reverse.',
+      'serverSettingsButton': 'Server settings',
+      'saveBackendUrl': 'Save backend URL',
+      'backendUrlSaved': 'Backend URL saved. Trying connection again.',
+      'backendUrlInvalid': 'Enter a valid backend URL.',
       'themeTitle': 'Themes',
       'themeSubtitle':
           'Choose the color style people see while using the app every day.',
@@ -94,6 +136,7 @@ class AppStrings {
       'drawerSyncCenter': 'Sync center',
       'drawerSettings': 'Settings',
       'drawerThemes': 'Themes',
+      'drawerLogout': 'Log out',
       'queueEmptyTitle': 'Nothing is waiting offline',
       'queueEmptyBody':
           'When connection is unavailable, submitted reports will appear here.',
@@ -182,6 +225,13 @@ class AppStrings {
       'syncWaiting': 'Saved reports are still waiting for a stable connection.',
       'syncOfflineLater': 'Still offline. Saved reports will sync later.',
       'approxAreaRequired': 'Approximate area is required.',
+      'authConnectionFailed':
+          'Could not reach the server. Check your connection and try again.',
+      'googleSignInNotConfigured':
+          'Google sign-in is not configured on this build yet. Add your Google web client ID first.',
+      'googleSignInCanceled': 'Google sign-in was canceled.',
+      'googleSignInFailed': 'Google sign-in failed. Please try again.',
+      'sessionLoading': 'Checking your saved session...',
     },
     AppLanguage.swahili: {
       'appTitle': 'Usalama wa Wanawake',
@@ -189,11 +239,19 @@ class AppStrings {
       'welcomeSubtitle': 'Anza safari yako ya kila siku kwa usalama',
       'getStarted': 'Anza',
       'registrationTitle': 'Tengeneza wasifu wako',
+      'registrationHint':
+          'Tengeneza akaunti mara moja, kisha ingia tena kwenye simu nyingine wakati wowote.',
+      'signInTitle': 'Ingia kwenye akaunti yako',
+      'signInSubtitle':
+          'Tumia barua pepe na nenosiri ulilosajili nalo ili uendelee kwenye simu hii.',
       'fullName': 'JINA KAMILI',
       'email': 'BARUA PEPE',
       'password': 'NENOSIRI',
       'confirmPassword': 'THIBITISHA NENOSIRI',
       'signUp': 'Jisajili',
+      'signIn': 'Ingia',
+      'continueWithGoogle': 'Endelea na Google',
+      'orContinueWith': 'Au endelea na',
       'fullNameRequired': 'Weka jina kamili.',
       'fullNameShort': 'Jina ni fupi sana.',
       'emailRequired': 'Weka barua pepe.',
@@ -202,11 +260,12 @@ class AppStrings {
       'passwordShort': 'Tumia angalau herufi 6.',
       'confirmPasswordRequired': 'Thibitisha nenosiri.',
       'passwordMismatch': 'Nenosiri hazifanani.',
+      'cancel': 'Ghairi',
       'registrationReady': 'Karibu {name}, usajili wako uko tayari.',
       'homeTitle': 'Move Safety',
       'homeSubtitle': 'Vifaa vya kila siku vya kuripoti sehemu moja.',
       'offline': 'Nje ya mtandao',
-      'live': 'Mtandao upo',
+      'live': 'Mtandaoni',
       'homeOverviewTitle': 'Muhtasari wa leo',
       'homeOverviewOffline':
           'Programu iko tayari kukusanya ripoti bila mtandao.',
@@ -220,6 +279,28 @@ class AppStrings {
       'report': 'Ripoti',
       'guide': 'Mwongozo',
       'sync': 'Sawazisha',
+      'sos': 'SOS',
+      'sosSubtitle':
+          'Zana za msaada wa haraka wakati wa hatari ya ghafla au uhitaji wa dharura.',
+      'sosActionTitle': 'Unahitaji msaada wa haraka sasa?',
+      'sosActionBody':
+          'Bonyeza kitendo cha SOS kunakili ujumbe ulio tayari. Programu itaweka eneo lako la sasa ikiliweza, ili uweze kubandika ujumbe huo haraka kwenye simu, SMS, au WhatsApp.',
+      'sosPrimaryAction': 'Nakili ujumbe wa SOS',
+      'sosReadyTitle': 'Ujumbe wa SOS uko tayari',
+      'sosReadyBody':
+          'Bandika ujumbe huu kwenye simu, SMS, au WhatsApp ili kuomba msaada haraka.',
+      'sosLocationAttached': 'Eneo la sasa limeongezwa',
+      'sosLocationMissing': 'Eneo halikuweza kuongezwa',
+      'sosCopiedWithLocation':
+          'Ujumbe wa SOS umenakiliwa pamoja na eneo la sasa.',
+      'sosCopiedWithoutLocation':
+          'Ujumbe wa SOS umenakiliwa. Eneo halijaongezwa.',
+      'sosActivationFailed':
+          'Imeshindikana kuandaa ujumbe wa SOS. Tafadhali jaribu tena.',
+      'sosMessageWithLocation':
+          'SOS! Nahitaji msaada wa haraka sasa hivi. Eneo langu la kukadiria ni {lat}, {lng}. Tafadhali wasiliana nami au huduma za dharura mara moja.',
+      'sosMessageNoLocation':
+          'SOS! Nahitaji msaada wa haraka sasa hivi. Tafadhali wasiliana nami au huduma za dharura mara moja.',
       'emergencyGuidance': 'Mwongozo wa dharura',
       'emergencyGuidanceBody':
           'Kama mtu yuko katika hatari ya haraka, wasiliana na huduma za dharura au msaidizi unayemwamini kwanza. Tumia kuripoti baada ya kuwa salama.',
@@ -243,6 +324,20 @@ class AppStrings {
       'settingsTitle': 'Mipangilio',
       'settingsSubtitle':
           'Dhibiti lugha, hali ya mwonekano, vikumbusho, na jinsi programu inavyofanya kazi nje ya mtandao.',
+      'backendServerTitle': 'Seva ya nyuma',
+      'backendServerSubtitle':
+          'Badilisha anuani hii kila kompyuta yako inapounganishwa na Wi-Fi nyingine.',
+      'backendUrlLabel': 'Anuani ya backend',
+      'backendUrlHint': 'http://172.17.16.69:8000/api/v1',
+      'backendWifiHelp':
+          'Ukitumia Wi-Fi, tumia IP ya kompyuta yako, kwa mfano http://172.17.16.69:8000/api/v1.',
+      'backendUsbHelp':
+          'Ukitumia USB, unaweza kutumia http://127.0.0.1:8000/api/v1 baada ya adb reverse.',
+      'serverSettingsButton': 'Mipangilio ya seva',
+      'saveBackendUrl': 'Hifadhi anuani ya backend',
+      'backendUrlSaved':
+          'Anuani ya backend imehifadhiwa. Inajaribu muunganisho tena.',
+      'backendUrlInvalid': 'Weka anuani sahihi ya backend.',
       'themeTitle': 'Mandhari',
       'themeSubtitle':
           'Chagua mtindo wa rangi ambao watu wataona kila siku wanapotumia programu.',
@@ -269,6 +364,7 @@ class AppStrings {
       'drawerSyncCenter': 'Kituo cha usawazishaji',
       'drawerSettings': 'Mipangilio',
       'drawerThemes': 'Mandhari',
+      'drawerLogout': 'Toka',
       'queueEmptyTitle': 'Hakuna kinachosubiri nje ya mtandao',
       'queueEmptyBody':
           'Muunganisho unapokosekana, ripoti zilizotumwa zitaonekana hapa.',
@@ -359,6 +455,14 @@ class AppStrings {
       'syncOfflineLater':
           'Bado nje ya mtandao. Ripoti zilizohifadhiwa zitasawazishwa baadaye.',
       'approxAreaRequired': 'Jaza jina la eneo la kukadiria.',
+      'authConnectionFailed':
+          'Imeshindwa kufikia seva. Angalia muunganisho wako kisha ujaribu tena.',
+      'googleSignInNotConfigured':
+          'Google sign-in haijawekwa kwenye toleo hili bado. Weka Google web client ID kwanza.',
+      'googleSignInCanceled': 'Google sign-in imeghairiwa.',
+      'googleSignInFailed':
+          'Google sign-in imeshindwa. Tafadhali jaribu tena.',
+      'sessionLoading': 'Inaangalia kikao chako kilichohifadhiwa...',
     },
   };
 

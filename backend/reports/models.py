@@ -92,3 +92,34 @@ class IncidentReport(models.Model):
 
     def __str__(self) -> str:
         return self.public_reference
+
+
+class ReportStatusHistory(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    report = models.ForeignKey(
+        IncidentReport,
+        on_delete=models.CASCADE,
+        db_column="report_id",
+        related_name="status_history",
+    )
+    previous_status = models.CharField(
+        max_length=20,
+        choices=IncidentReport.Status.choices,
+        blank=True,
+        null=True,
+    )
+    new_status = models.CharField(
+        max_length=20,
+        choices=IncidentReport.Status.choices,
+    )
+    moderation_note = models.TextField(blank=True, null=True)
+    changed_by_admin_id = models.UUIDField(blank=True, null=True)
+    changed_at = models.DateTimeField()
+
+    class Meta:
+        db_table = "report_status_history"
+        managed = False
+        ordering = ["-changed_at"]
+
+    def __str__(self) -> str:
+        return f"{self.report.public_reference}: {self.previous_status} -> {self.new_status}"

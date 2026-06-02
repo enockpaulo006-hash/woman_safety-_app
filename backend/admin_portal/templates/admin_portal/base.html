@@ -1,0 +1,115 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ page_title }} | Women Safety Admin Portal</title>
+    <link rel="stylesheet" href="{% static 'admin_portal/css/portal.css' %}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="portal-page portal-page-{{ page_name }}">
+    <div class="portal-shell">
+        <aside class="portal-sidebar">
+            <button
+                type="button"
+                class="portal-sidebar-toggle"
+                data-sidebar-toggle
+                aria-expanded="true"
+                aria-label="Show or hide portal menu"
+            >
+                Menu
+            </button>
+            <div class="portal-brand">
+                <span class="portal-brand-kicker">Project 17</span>
+                <h1>Women Safety Portal</h1>
+                <p>Role-based workspace for reviewing reports, mapping hotspots, and preparing policy outputs.</p>
+            </div>
+            <div class="portal-side-group">
+                <p class="portal-side-heading">Workflow</p>
+                <nav class="portal-nav">
+                    {% for step in portal_steps %}
+                    <a href="{% url step.url_name %}" class="{% if page_name == step.key %}is-active{% endif %}" title="{{ step.title }}">
+                        <span class="portal-step-number">{{ forloop.counter }}</span>
+                        <span>
+                            <span class="portal-nav-label">{{ step.title }}</span>
+                            <small>{{ step.description }}</small>
+                        </span>
+                    </a>
+                    {% endfor %}
+                </nav>
+            </div>
+            <section class="portal-side-card">
+                <p class="portal-card-label">Your Access</p>
+                {% for role_label in portal_role_labels %}
+                <span class="portal-role-pill">{{ role_label }}</span>
+                {% empty %}
+                <span class="portal-role-pill">No portal role assigned</span>
+                {% endfor %}
+            </section>
+            <section class="portal-side-card portal-side-card-accent">
+                <p class="portal-card-label">How to Use</p>
+                <ol class="portal-side-steps">
+                    <li>Start on the dashboard.</li>
+                    <li>Open the next visible step.</li>
+                    <li>Use Back and Next to move through your allowed work.</li>
+                </ol>
+            </section>
+        </aside>
+        <main class="portal-main">
+            <header class="portal-header">
+                <div class="portal-header-copy">
+                    <p class="portal-eyebrow">{{ page_kicker|default:"Admin Portal" }}</p>
+                    <h2>{{ page_title }}</h2>
+                    <p class="portal-header-summary">
+                        {{ page_summary }}
+                    </p>
+                </div>
+                <div class="portal-header-actions">
+                    <div class="portal-header-stack">
+                        <div class="portal-user-badge">
+                            <span class="portal-user-mark">{{ request.user.get_username|default:"WS"|slice:":2"|upper }}</span>
+                            <div>
+                                <strong>{{ request.user.get_full_name|default:request.user.get_username }}</strong>
+                                <small>{{ portal_role_labels|join:", " }}</small>
+                            </div>
+                        </div>
+                        <form method="post" action="{% url 'admin-logout' %}" class="portal-logout-form">
+                            {% csrf_token %}
+                            <button type="submit" class="portal-logout-button">Sign out</button>
+                        </form>
+                    </div>
+                </div>
+            </header>
+            {% if portal_steps %}
+            <nav class="portal-workflow-trail" aria-label="Portal workflow">
+                {% for step in portal_steps %}
+                <a href="{% url step.url_name %}" class="{% if page_name == step.key %}is-current{% endif %}">
+                    <span>{{ forloop.counter }}</span>
+                    {{ step.title }}
+                </a>
+                {% endfor %}
+            </nav>
+            {% endif %}
+            <div class="portal-action-row">
+                {% block page_actions %}{% endblock %}
+            </div>
+            {% block content %}{% endblock %}
+            <nav class="portal-step-controls" aria-label="Step controls">
+                {% if previous_step %}
+                <a class="portal-step-button" href="{% url previous_step.url_name %}">Back: {{ previous_step.title }}</a>
+                {% else %}
+                <span class="portal-step-button is-disabled">Back</span>
+                {% endif %}
+                {% if next_step %}
+                <a class="portal-step-button portal-step-button-next" href="{% url next_step.url_name %}">Next: {{ next_step.title }}</a>
+                {% else %}
+                <span class="portal-step-button is-disabled">Next</span>
+                {% endif %}
+            </nav>
+        </main>
+    </div>
+    {% block extra_scripts %}{% endblock %}
+    <script src="{% static 'admin_portal/js/portal.js' %}"></script>
+</body>
+</html>

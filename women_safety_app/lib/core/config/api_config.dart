@@ -1,25 +1,67 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
 
 class ApiConfig {
-  // For USB testing on a physical Android phone, use `adb reverse tcp:8000 tcp:8000`
-  // so the device can reach the backend through localhost.
-  static const _phoneDevBaseUrl = "http://127.0.0.1:8000/api/v1";
+  // Default to the current computer Wi-Fi IP for real phones on the same LAN.
+  // This can be overridden at runtime from app settings.
+  static const _androidDeviceBaseUrl = "http://192.168.1.3:8000/api/v1";
+  static const _localBaseUrl = "http://192.168.1.3:8000/api/v1";
+  static String? _savedBaseUrl;
 
-  static String get baseUrl {
-    const override = String.fromEnvironment("API_BASE_URL");
-    if (override.isNotEmpty) {
-      return override;
-    }
-
+  static String get defaultBaseUrl {
     if (kIsWeb) {
-      return "http://127.0.0.1:8000/api/v1";
+      return _localBaseUrl;
     }
 
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
-        return _phoneDevBaseUrl;
+        return _androidDeviceBaseUrl;
       default:
-        return "http://127.0.0.1:8000/api/v1";
+        return _localBaseUrl;
     }
   }
+
+  static String get baseUrl {
+    const override = String.fromEnvironment("API_BASE_URL");
+    if (override.isNotEmpty) {
+      return normalizeBaseUrl(override, fallback: defaultBaseUrl);
+    }
+
+    return _savedBaseUrl ?? defaultBaseUrl;
+  }
+
+  static void setSavedBaseUrl(String? value) {
+    _savedBaseUrl = normalizeBaseUrl(value, fallback: defaultBaseUrl);
+  }
+
+  static String normalizeBaseUrl(String? value, {required String fallback}) {
+    final rawValue = value?.trim() ?? "";
+    if (rawValue.isEmpty) {
+      return _trimTrailingSlash(fallback);
+    }
+
+    final candidate = rawValue.contains("://") ? rawValue : "http://$rawValue";
+    final uri = Uri.tryParse(candidate);
+    if (uri == null || uri.host.isEmpty) {
+      throw const FormatException("Invalid backend URL.");
+    }
+
+    var path = uri.path.trim();
+    final apiBaseIndex = path.indexOf("/api/v1");
+    if (apiBaseIndex >= 0) {
+      path = path.substring(apiBaseIndex, apiBaseIndex + 7);
+    } else if (path.isEmpty || path == "/") {
+      path = "/api/v1";
+    } else {
+      path = _trimTrailingSlash(path);
+    }
+
+    return _trimTrailingSlash(
+      uri.replace(path: path, query: null, fragment: null).toString(),
+    );
+  }
+
+  static String _trimTrailingSlash(String value) {
+    return value.replaceFirst(RegExp(r"/+$"), "");
+  }
 }
+

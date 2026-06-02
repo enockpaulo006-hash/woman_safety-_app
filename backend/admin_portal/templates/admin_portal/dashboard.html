@@ -1,0 +1,151 @@
+{% extends "admin_portal/base.html" %}
+
+{% block page_actions %}
+<span class="portal-chip portal-chip-strong">{{ total_reports }} total reports</span>
+<span class="portal-chip">{{ approved_total }} approved for map/report</span>
+{% endblock %}
+
+{% block content %}
+<section class="portal-hero">
+    <div class="portal-hero-copy">
+        <p class="portal-card-label">Safety Intelligence Dashboard</p>
+        <h3>Start here, then follow your visible steps.</h3>
+        <p>
+            This dashboard shows what has been reported and which part of the
+            workflow your role can open next.
+        </p>
+        <div class="portal-chip-row">
+            {% for step in portal_steps %}
+                {% if step.key != "dashboard" %}
+                <a class="portal-chip {% if forloop.first %}portal-chip-strong{% endif %}" href="{% url step.url_name %}">{{ step.title }}</a>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    <div class="portal-hero-panel">
+        <div class="portal-mini-metric">
+            <span>Total reports</span>
+            <strong>{{ total_reports }}</strong>
+        </div>
+        <div class="portal-mini-metric">
+            <span>Approved intelligence</span>
+            <strong>{{ approved_total }}</strong>
+        </div>
+    </div>
+</section>
+
+<section class="portal-stat-grid">
+    <article class="portal-stat-card">
+        <p class="portal-card-label">Submitted</p>
+        <h3>{{ status_counts.submitted|default:0 }}</h3>
+        <strong>New reports</strong>
+        <p>Reports that still need first review.</p>
+    </article>
+    <article class="portal-stat-card">
+        <p class="portal-card-label">Approved</p>
+        <h3>{{ approved_total }}</h3>
+        <strong>Ready for policy use</strong>
+        <p>Reports feeding the map and monthly statistics.</p>
+    </article>
+    <article class="portal-stat-card">
+        <p class="portal-card-label">Rejected / Archived</p>
+        <h3>{{ rejected_total }} / {{ archived_total }}</h3>
+        <strong>Excluded records</strong>
+        <p>Reports not used for policy statistics.</p>
+    </article>
+</section>
+
+<section class="portal-layout portal-layout-2col">
+    <article class="portal-card">
+        <div class="portal-section-heading">
+            <div>
+                <p class="portal-card-label">Highest-Risk Areas</p>
+                <h3>Approved incident hotspots</h3>
+            </div>
+        </div>
+        <div class="portal-bar-chart">
+            {% for area in top_areas %}
+            <div class="portal-bar-row">
+                <div class="portal-bar-label">
+                    <strong>{{ area.label }}</strong>
+                    <span>{{ area.count }} report{{ area.count|pluralize }}</span>
+                </div>
+                <div class="portal-bar-track">
+                    <span class="portal-bar-fill" style="width: {{ area.bar_width|default:area.count }}%"></span>
+                </div>
+            </div>
+            {% empty %}
+            <div class="portal-empty-state">Approve reports to see hotspot areas.</div>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="portal-card">
+        <div class="portal-section-heading">
+            <div>
+                <p class="portal-card-label">Time Risk</p>
+                <h3>When approved incidents happen</h3>
+            </div>
+        </div>
+        <div class="portal-bar-chart">
+            {% for time_item in time_chart %}
+            <div class="portal-bar-row">
+                <div class="portal-bar-label">
+                    <strong>{{ time_item.label }}</strong>
+                    <span>{{ time_item.count }} report{{ time_item.count|pluralize }} - {{ time_item.percent }}%</span>
+                </div>
+                <div class="portal-bar-track">
+                    <span class="portal-bar-fill portal-bar-fill-alt" style="width: {{ time_item.bar_width }}%"></span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+
+<section class="portal-layout portal-layout-2col">
+    <article class="portal-card">
+        <div class="portal-section-heading">
+            <div>
+                <p class="portal-card-label">Incident Categories</p>
+                <h3>Most reported approved incident types</h3>
+            </div>
+        </div>
+        <div class="portal-module-list">
+            {% for category in top_categories %}
+            <div class="portal-module-row">
+                <strong>{{ category.label }}</strong>
+                <span>{{ category.count }} approved report{{ category.count|pluralize }}</span>
+            </div>
+            {% empty %}
+            <div class="portal-module-row">
+                <strong>No categories yet</strong>
+                <span>Approve reports to populate category statistics.</span>
+            </div>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="portal-card">
+        <div class="portal-section-heading">
+            <div>
+                <p class="portal-card-label">Recent Reports</p>
+                <h3>Latest incoming records</h3>
+            </div>
+        </div>
+        <div class="portal-module-list">
+            {% for report in recent_reports %}
+            <div class="portal-module-row">
+                <strong>{{ report.public_reference }} - {{ report.get_status_display }}</strong>
+                <span>{{ report.category.name }} at {{ report.approx_area_name|default:report.ward_or_district|default:"area missing" }} on {{ report.reported_at|date:"M j, Y H:i" }}</span>
+            </div>
+            {% empty %}
+            <div class="portal-module-row">
+                <strong>No reports yet</strong>
+                <span>Submitted mobile reports will appear here.</span>
+            </div>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+{% endblock %}

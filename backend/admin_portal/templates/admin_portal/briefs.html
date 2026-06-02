@@ -1,0 +1,206 @@
+{% extends "admin_portal/base.html" %}
+
+{% block page_actions %}
+<span class="portal-chip portal-chip-strong">Monthly summary builder</span>
+<span class="portal-chip">{{ total_reports }} approved reports</span>
+<button type="button" class="portal-print-button" data-print-brief>Print brief</button>
+<a class="portal-print-button" href="{{ export_url }}">Download CSV</a>
+{% endblock %}
+
+{% block content %}
+<section class="portal-layout portal-layout-2col">
+    <article class="portal-card portal-card-highlight">
+        <div class="portal-section-heading">
+            <div>
+                <p class="portal-card-label">Deliverable 3</p>
+                <h3>Monthly policy brief generator</h3>
+            </div>
+        </div>
+        <form class="portal-filter-row" method="get">
+            <div class="portal-filter-box">
+                <label for="brief-month">Reporting month</label>
+                <input id="brief-month" type="month" name="month" value="{{ selected_month }}">
+            </div>
+            <div class="portal-filter-box">
+                <label for="brief-audience">Audience</label>
+                <select id="brief-audience" name="audience">
+                    <option value="city_ngo" {% if audience == "city_ngo" %}selected{% endif %}>City and NGO partners</option>
+                    <option value="police" {% if audience == "police" %}selected{% endif %}>Police partners</option>
+                    <option value="advocacy" {% if audience == "advocacy" %}selected{% endif %}>TAWLA advocacy</option>
+                </select>
+            </div>
+            <button class="portal-filter-submit" type="submit">Generate brief</button>
+        </form>
+        <div class="portal-stat-strip">
+            <div>
+                <span>Approved reports</span>
+                <strong>{{ total_reports }}</strong>
+            </div>
+            <div>
+                <span>Peak time</span>
+                <strong>{{ peak_time|title }}</strong>
+            </div>
+            <div>
+                <span>Window</span>
+                <strong>{{ month_start|date:"M j" }} - {{ month_end|date:"M j" }}</strong>
+            </div>
+        </div>
+    </article>
+    <article class="portal-card">
+        <p class="portal-card-label">Main Statistics</p>
+        <div class="portal-stat-strip portal-stat-strip-vertical">
+            <div>
+                <span>Highest-risk area</span>
+                <strong>{% if area_chart %}{{ area_chart.0.label }}{% else %}None{% endif %}</strong>
+            </div>
+            <div>
+                <span>Most common incident</span>
+                <strong>{% if category_chart %}{{ category_chart.0.label }}{% else %}None{% endif %}</strong>
+            </div>
+            <div>
+                <span>Most affected place type</span>
+                <strong>{% if location_type_chart %}{{ location_type_chart.0.label }}{% else %}None{% endif %}</strong>
+            </div>
+        </div>
+    </article>
+</section>
+
+<section class="portal-card portal-brief-document" data-brief-document>
+    <div class="portal-brief-masthead">
+        <div>
+            <p class="portal-card-label">Project 17 Policy Brief</p>
+            <h3>Gender-sensitive safety incidents: {{ month_label }}</h3>
+            <p>Prepared for city council, TAWLA, police, and NGO response partners.</p>
+        </div>
+        <div class="portal-brief-meta">
+            <span>{{ month_start|date:"M j, Y" }} - {{ month_end|date:"M j, Y" }}</span>
+            <strong>{{ total_reports }} approved report{{ total_reports|pluralize }}</strong>
+        </div>
+    </div>
+
+    <div class="portal-brief-section">
+        <p class="portal-card-label">Executive Summary</p>
+        <p class="portal-brief-summary">{{ summary_text }}</p>
+    </div>
+
+    <div class="portal-brief-section">
+        <p class="portal-card-label">Area Crime Statistics</p>
+        <h4>Areas with the most reported incidents</h4>
+        <div class="portal-bar-chart">
+            {% for area in area_chart %}
+            <div class="portal-bar-row">
+                <div class="portal-bar-label">
+                    <strong>{{ area.label }}</strong>
+                    <span>{{ area.count }} report{{ area.count|pluralize }} - {{ area.percent }}%</span>
+                </div>
+                <div class="portal-bar-track">
+                    <span class="portal-bar-fill" style="width: {{ area.bar_width }}%"></span>
+                </div>
+            </div>
+            {% empty %}
+            <div class="portal-empty-state">No approved reports are available for this month.</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="portal-brief-grid portal-brief-grid-2col">
+        <article>
+            <p class="portal-card-label">Time Pattern</p>
+            <h4>When incidents happen most</h4>
+            <div class="portal-bar-chart">
+                {% for time_item in time_chart %}
+                <div class="portal-bar-row">
+                    <div class="portal-bar-label">
+                        <strong>{{ time_item.label }}</strong>
+                        <span>{{ time_item.count }} report{{ time_item.count|pluralize }} - {{ time_item.percent }}%</span>
+                    </div>
+                    <div class="portal-bar-track">
+                        <span class="portal-bar-fill portal-bar-fill-alt" style="width: {{ time_item.bar_width }}%"></span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </article>
+        <article>
+            <p class="portal-card-label">Incident Category Pattern</p>
+            <h4>Which incident types are most reported</h4>
+            <div class="portal-bar-chart">
+                {% for category in category_chart %}
+                <div class="portal-bar-row">
+                    <div class="portal-bar-label">
+                        <strong>{{ category.label }}</strong>
+                        <span>{{ category.count }} report{{ category.count|pluralize }} - {{ category.percent }}%</span>
+                    </div>
+                    <div class="portal-bar-track">
+                        <span class="portal-bar-fill portal-bar-fill-strong" style="width: {{ category.bar_width }}%"></span>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="portal-empty-state">No approved reports are available for this month.</div>
+                {% endfor %}
+            </div>
+        </article>
+    </div>
+
+    <div class="portal-brief-section">
+        <p class="portal-card-label">Public Space Pattern</p>
+        <h4>Which type of place needs more security attention</h4>
+        <div class="portal-bar-chart">
+            {% for location_type in location_type_chart %}
+            <div class="portal-bar-row">
+                <div class="portal-bar-label">
+                    <strong>{{ location_type.label }}</strong>
+                    <span>{{ location_type.count }} report{{ location_type.count|pluralize }} - {{ location_type.percent }}%</span>
+                </div>
+                <div class="portal-bar-track">
+                    <span class="portal-bar-fill portal-bar-fill-muted" style="width: {{ location_type.bar_width }}%"></span>
+                </div>
+            </div>
+                {% empty %}
+            <div class="portal-empty-state">No approved reports are available for this month.</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="portal-brief-section">
+        <p class="portal-card-label">Recommended Actions</p>
+        <ol class="portal-roadmap">
+            {% for recommendation in recommendations %}
+            <li>{{ recommendation }}</li>
+            {% endfor %}
+        </ol>
+    </div>
+
+    <div class="portal-brief-section">
+        <p class="portal-card-label">Approved Incident Sample</p>
+        <div class="portal-table-wrap portal-brief-table-wrap">
+            <table class="portal-table">
+                <thead>
+                    <tr>
+                        <th>Reference</th>
+                        <th>Category</th>
+                        <th>Area</th>
+                        <th>Location Type</th>
+                        <th>Occurred</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for report in report_rows %}
+                    <tr>
+                        <td>{{ report.reference }}</td>
+                        <td>{{ report.category }}</td>
+                        <td>{{ report.area }}</td>
+                        <td>{{ report.location_type }}</td>
+                        <td>{{ report.occurred_at|date:"M j, Y H:i" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="portal-empty-state">No approved incidents for this month.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+{% endblock %}

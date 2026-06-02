@@ -1,10 +1,15 @@
+import 'dart:io';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../../../../core/localization/app_strings.dart';
 import '../../../../core/settings/app_settings_controller.dart';
 import '../../../../core/settings/app_settings_scope.dart';
 import '../../../../core/theme/app_palette.dart';
+import '../../auth/data/models/auth_session.dart';
 import '../data/models/incident_category.dart';
 import '../data/models/location_type.dart';
 import '../data/models/pending_incident_report.dart';
@@ -13,20 +18,11 @@ import '../data/services/offline_report_store.dart';
 import '../data/services/reporting_api_service.dart';
 import '../data/services/reporting_seed_data.dart';
 
-const _deepIndigo = AppPalette.deepBerry;
-const _primaryIndigo = AppPalette.primaryRose;
-const _brightIndigo = AppPalette.brightRose;
-const _mint = AppPalette.blush;
-const _pink = AppPalette.accentCoral;
-const _softPink = AppPalette.softShell;
-const _softLilac = AppPalette.softRose;
-const _mutedText = AppPalette.mutedRose;
-const _cardShadow = AppPalette.cardShadow;
-
 enum _AppSection {
   home,
   report,
   offline,
+  sos,
   guide,
   syncCenter,
   settings,
@@ -34,13 +30,21 @@ enum _AppSection {
 }
 
 class ReportHomePage extends StatefulWidget {
-  const ReportHomePage({super.key});
+  const ReportHomePage({
+    required this.currentUser,
+    required this.onLogout,
+    super.key,
+  });
+
+  final AuthenticatedUser currentUser;
+  final Future<void> Function() onLogout;
 
   @override
   State<ReportHomePage> createState() => _ReportHomePageState();
 }
 
-class _ReportHomePageState extends State<ReportHomePage> {
+class _ReportHomePageState extends State<ReportHomePage>
+    with WidgetsBindingObserver {
   final _formKey = GlobalKey<FormState>();
   final _scaffoldKey = GlobalKey<ScaffoldState>();
   final _api = ReportingApiService();
@@ -63,31 +67,43 @@ class _ReportHomePageState extends State<ReportHomePage> {
   bool _isLoading = true;
   bool _isSubmitting = false;
   bool _usingOfflineTaxonomies = false;
+  bool _isLiveConnectionAvailable = false;
   bool _isSyncingPendingReports = false;
+  bool _isPreparingSos = false;
   int _pendingReportCount = 0;
-  int _selectedBottomIndex = 0;
+  int? _selectedBottomIndex = 0;
   _AppSection _currentSection = _AppSection.home;
-  bool _autoSyncEnabled = true;
-  bool _locationHintsEnabled = true;
-  bool _privacyTipsEnabled = true;
   ReportSubmissionResult? _lastSubmission;
+  final List<_AppSection> _sectionHistory = [];
 
   AppStrings get _strings => AppSettingsScope.readStringsOf(context);
   AppSettingsController get _settingsController =>
       AppSettingsScope.readControllerOf(context);
+  bool get _autoSyncEnabled => _settingsController.autoSyncEnabled;
+  bool get _locationHintsEnabled => _settingsController.locationHintsEnabled;
+  bool get _privacyTipsEnabled => _settingsController.privacyTipsEnabled;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initialize();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _areaController.dispose();
     _wardController.dispose();
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadTaxonomies();
+    }
   }
 
   Future<void> _initialize() async {
@@ -144,12 +160,18 @@ class _ReportHomePageState extends State<ReportHomePage> {
   Future<void> _loadTaxonomies() async {
     final previousCategoryCode = _selectedCategory?.code;
     final previousLocationTypeCode = _selectedLocationType?.code;
+    var backendAvailable = false;
 
     setState(() {
       _isLoading = true;
     });
 
     try {
+      backendAvailable = await _api.isBackendAvailable();
+      if (!backendAvailable) {
+        throw const SocketException("Backend is not reachable.");
+      }
+
       final categories = await _api.fetchIncidentCategories();
       final locationTypes = await _api.fetchLocationTypes();
 
@@ -165,6 +187,7 @@ class _ReportHomePageState extends State<ReportHomePage> {
           locationTypes,
           previousLocationTypeCode,
         );
+        _isLiveConnectionAvailable = true;
         _usingOfflineTaxonomies = false;
         _isLoading = false;
       });
@@ -195,6 +218,7 @@ class _ReportHomePageState extends State<ReportHomePage> {
           fallbackLocationTypes,
           previousLocationTypeCode,
         );
+        _isLiveConnectionAvailable = backendAvailable;
         _usingOfflineTaxonomies = true;
         _isLoading = false;
       });
@@ -237,10 +261,7 @@ class _ReportHomePageState extends State<ReportHomePage> {
   }
 
   Future<void> _openReportForm() async {
-    setState(() {
-      _selectedBottomIndex = 1;
-      _currentSection = _AppSection.report;
-    });
+    _setSection(_AppSection.report);
   }
 
   void _openDrawer() {
@@ -252,17 +273,27 @@ class _ReportHomePageState extends State<ReportHomePage> {
       0 => _AppSection.home,
       1 => _AppSection.report,
       2 => _AppSection.offline,
-      _ => _AppSection.guide,
+      _ => _AppSection.sos,
     };
 
-    setState(() {
-      _selectedBottomIndex = index;
-      _currentSection = section;
-    });
+    _setSection(section);
   }
 
   void _openSection(_AppSection section) {
+    _setSection(section);
+  }
+
+  void _setSection(_AppSection section, {bool rememberHistory = true}) {
+    if (section == _currentSection) {
+      return;
+    }
+
     setState(() {
+      if (rememberHistory) {
+        _sectionHistory.remove(section);
+        _sectionHistory.add(_currentSection);
+      }
+
       _currentSection = section;
 
       switch (section) {
@@ -272,14 +303,64 @@ class _ReportHomePageState extends State<ReportHomePage> {
           _selectedBottomIndex = 1;
         case _AppSection.offline:
           _selectedBottomIndex = 2;
-        case _AppSection.guide:
+        case _AppSection.sos:
           _selectedBottomIndex = 3;
+        case _AppSection.guide:
         case _AppSection.syncCenter:
         case _AppSection.settings:
         case _AppSection.themes:
+          _selectedBottomIndex = null;
           break;
       }
     });
+  }
+
+  void _goBackToPreviousSection() {
+    while (_sectionHistory.isNotEmpty) {
+      final previousSection = _sectionHistory.removeLast();
+      if (previousSection != _currentSection) {
+        _setSection(previousSection, rememberHistory: false);
+        return;
+      }
+    }
+
+    if (_currentSection != _AppSection.home) {
+      _setSection(_AppSection.home, rememberHistory: false);
+    }
+  }
+
+  Future<Position> _captureCurrentPosition() async {
+    final strings = _strings;
+
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      throw _LocationCaptureException(
+        strings.text('locationServiceOff'),
+      );
+    }
+
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.denied) {
+      throw _LocationCaptureException(
+        strings.text('locationPermissionDenied'),
+      );
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      throw _LocationCaptureException(
+        strings.text('locationPermissionForever'),
+      );
+    }
+
+    return Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+      ),
+    );
   }
 
   Future<void> _useCurrentLocation() async {
@@ -294,35 +375,7 @@ class _ReportHomePageState extends State<ReportHomePage> {
     });
 
     try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        throw _LocationCaptureException(
-          strings.text('locationServiceOff'),
-        );
-      }
-
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-
-      if (permission == LocationPermission.denied) {
-        throw _LocationCaptureException(
-          strings.text('locationPermissionDenied'),
-        );
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        throw _LocationCaptureException(
-          strings.text('locationPermissionForever'),
-        );
-      }
-
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-        ),
-      );
+      final position = await _captureCurrentPosition();
 
       if (!mounted) {
         return;
@@ -350,6 +403,217 @@ class _ReportHomePageState extends State<ReportHomePage> {
 
       _showSnack(strings.text('locationCaptureFailed'));
     }
+  }
+
+  String _buildSosMessage(Position? position) {
+    final strings = _strings;
+    if (position == null) {
+      return strings.text('sosMessageNoLocation');
+    }
+
+    return strings.text('sosMessageWithLocation', {
+      'lat': position.latitude.toStringAsFixed(5),
+      'lng': position.longitude.toStringAsFixed(5),
+    });
+  }
+
+  Future<void> _activateSosSupport() async {
+    final strings = _strings;
+    if (_isPreparingSos) {
+      return;
+    }
+
+    setState(() {
+      _isPreparingSos = true;
+    });
+
+    Position? position;
+
+    try {
+      position = await _captureCurrentPosition();
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _capturedLatitude = position!.latitude;
+        _capturedLongitude = position.longitude;
+      });
+    } catch (_) {
+      position = null;
+    }
+
+    try {
+      final message = _buildSosMessage(position);
+      await Clipboard.setData(ClipboardData(text: message));
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isPreparingSos = false;
+      });
+
+      _showSnack(
+        position == null
+            ? strings.text('sosCopiedWithoutLocation')
+            : strings.text('sosCopiedWithLocation'),
+      );
+
+      await _showSosReadySheet(
+        message: message,
+        hasLocation: position != null,
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isPreparingSos = false;
+      });
+      _showSnack(strings.text('sosActivationFailed'));
+    }
+  }
+
+  Future<void> _showSosReadySheet({
+    required String message,
+    required bool hasLocation,
+  }) {
+    final strings = _strings;
+
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        final visuals = sheetContext.appVisuals;
+
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Container(
+              padding: const EdgeInsets.all(22),
+              decoration: BoxDecoration(
+                color: visuals.cardSurface,
+                borderRadius: BorderRadius.circular(30),
+                boxShadow: [
+                  BoxShadow(
+                    color: visuals.cardShadow,
+                    blurRadius: 26,
+                    offset: const Offset(0, 16),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE5484D),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Icon(
+                          Icons.sos_rounded,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          strings.text('sosReadyTitle'),
+                          style: Theme.of(
+                            sheetContext,
+                          ).textTheme.titleLarge?.copyWith(
+                            color: visuals.deep,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    strings.text('sosReadyBody'),
+                    style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
+                      color: visuals.muted,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Color.alphaBlend(
+                        (hasLocation
+                                ? const Color(0xFF1FA971)
+                                : const Color(0xFFE59F2F))
+                            .withValues(alpha: 0.16),
+                        visuals.softSurface,
+                      ),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      hasLocation
+                          ? strings.text('sosLocationAttached')
+                          : strings.text('sosLocationMissing'),
+                      style: Theme.of(sheetContext).textTheme.labelLarge?.copyWith(
+                        color: visuals.deep,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: visuals.softSurface,
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: SelectableText(
+                      message,
+                      style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
+                        color: visuals.deep,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: () {
+                      Navigator.of(sheetContext).pop();
+                      _openReportForm();
+                    },
+                    icon: const Icon(Icons.edit_note_rounded),
+                    label: Text(strings.text('openReportForm')),
+                  ),
+                  const SizedBox(height: 10),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.of(sheetContext).pop();
+                      _openSection(_AppSection.guide);
+                    },
+                    icon: const Icon(Icons.shield_outlined),
+                    label: Text(strings.text('drawerGuide')),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _submit() async {
@@ -437,6 +701,7 @@ class _ReportHomePageState extends State<ReportHomePage> {
         setState(() {
           _lastSubmission = result;
           _isSubmitting = false;
+          _isLiveConnectionAvailable = false;
           _usingOfflineTaxonomies = true;
         });
         _showSnack(result.message);
@@ -574,6 +839,7 @@ class _ReportHomePageState extends State<ReportHomePage> {
         _pendingReports = remainingReports;
         _pendingReportCount = remainingReports.length;
         _isSyncingPendingReports = false;
+        _isLiveConnectionAvailable = true;
         _usingOfflineTaxonomies = false;
       });
 
@@ -600,6 +866,7 @@ class _ReportHomePageState extends State<ReportHomePage> {
 
       setState(() {
         _isSyncingPendingReports = false;
+        _isLiveConnectionAvailable = false;
       });
 
       if (showSnack) {
@@ -631,9 +898,29 @@ class _ReportHomePageState extends State<ReportHomePage> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  Future<void> _handleBackendUrlSaved(String value) async {
+    try {
+      await _settingsController.setBackendUrl(value);
+      if (!mounted) {
+        return;
+      }
+
+      _showSnack(_strings.text('backendUrlSaved'));
+      await _loadTaxonomies();
+    } on FormatException {
+      if (!mounted) {
+        return;
+      }
+
+      _showSnack(_strings.text('backendUrlInvalid'));
+    }
+  }
+
   Future<void> _handleHomeRefresh() async {
     await _loadTaxonomies();
-    if (_autoSyncEnabled && _pendingReportCount > 0 && !_usingOfflineTaxonomies) {
+    if (_autoSyncEnabled &&
+        _pendingReportCount > 0 &&
+        _isLiveConnectionAvailable) {
       await _syncPendingReports(showSnack: false);
     }
   }
@@ -646,6 +933,8 @@ class _ReportHomePageState extends State<ReportHomePage> {
         return _buildReportSection();
       case _AppSection.offline:
         return _buildOfflineSection();
+      case _AppSection.sos:
+        return _buildSosSection();
       case _AppSection.guide:
         return _buildGuideSection();
       case _AppSection.syncCenter:
@@ -659,48 +948,47 @@ class _ReportHomePageState extends State<ReportHomePage> {
 
   Widget _buildHomeSection() {
     final strings = AppSettingsScope.stringsOf(context);
+    final visuals = context.appVisuals;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final horizontalPadding = screenWidth < 380 ? 16.0 : 20.0;
+    final heroAspectRatio = screenWidth < 380 ? 0.72 : 0.74;
 
-    return RefreshIndicator(
-      onRefresh: _handleHomeRefresh,
-      color: _deepIndigo,
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(
-          parent: BouncingScrollPhysics(),
-        ),
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        horizontalPadding,
+        16,
+        horizontalPadding,
+        120,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _SectionTopBar(
             title: strings.text('homeTitle'),
             subtitle: strings.text('homeSubtitle'),
             onMenuPressed: _openDrawer,
             action: _StatusPill(
-              label: _usingOfflineTaxonomies
-                  ? strings.text('offline')
-                  : strings.text('live'),
-              color: _usingOfflineTaxonomies ? _primaryIndigo : _mint,
+              label: _isLiveConnectionAvailable
+                  ? strings.text('online')
+                  : strings.text('offline'),
+              color: _isLiveConnectionAvailable
+                  ? visuals.blush
+                  : visuals.primary,
             ),
           ),
           const SizedBox(height: 18),
-          _HeroCard(onOpenForm: _openReportForm),
-          const SizedBox(height: 18),
-          _HomeOverviewCard(
-            pendingReportCount: _pendingReportCount,
-            usingOfflineTaxonomies: _usingOfflineTaxonomies,
-            onOpenReportForm: _openReportForm,
-            onOpenOfflineQueue: () => _openSection(_AppSection.offline),
+          Expanded(
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 460),
+                child: AspectRatio(
+                  aspectRatio: heroAspectRatio,
+                  child: _HeroCard(onOpenForm: _openReportForm),
+                ),
+              ),
+            ),
           ),
-          const SizedBox(height: 18),
-          _HomeQuickActionsCard(
-            pendingReportCount: _pendingReportCount,
-            onOpenReportForm: _openReportForm,
-            onOpenOfflineQueue: () => _openSection(_AppSection.offline),
-            onOpenGuide: () => _openSection(_AppSection.guide),
-            onOpenSyncCenter: () => _openSection(_AppSection.syncCenter),
-          ),
-          if (_lastSubmission != null) ...[
-            _SubmissionResultCard(result: _lastSubmission!),
-            const SizedBox(height: 18),
-          ],
         ],
       ),
     );
@@ -708,10 +996,11 @@ class _ReportHomePageState extends State<ReportHomePage> {
 
   Widget _buildReportSection() {
     final strings = AppSettingsScope.stringsOf(context);
+    final visuals = context.appVisuals;
 
     return RefreshIndicator(
       onRefresh: _loadTaxonomies,
-      color: _deepIndigo,
+      color: visuals.primary,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(
           parent: BouncingScrollPhysics(),
@@ -721,14 +1010,15 @@ class _ReportHomePageState extends State<ReportHomePage> {
           _SectionTopBar(
             title: strings.text('reportSectionTitle'),
             subtitle: strings.text('reportSectionSubtitle'),
+            onBackPressed: _goBackToPreviousSection,
             onMenuPressed: _openDrawer,
           ),
           const SizedBox(height: 18),
-          if (_usingOfflineTaxonomies ||
+          if (!_isLiveConnectionAvailable ||
               _pendingReportCount > 0 ||
               _isSyncingPendingReports) ...[
             _OfflineStatusCard(
-              isOfflineMode: _usingOfflineTaxonomies,
+              isOfflineMode: !_isLiveConnectionAvailable,
               pendingReportCount: _pendingReportCount,
               isSyncing: _isSyncingPendingReports,
               onRetryConnection: _loadTaxonomies,
@@ -778,10 +1068,11 @@ class _ReportHomePageState extends State<ReportHomePage> {
 
   Widget _buildOfflineSection() {
     final strings = AppSettingsScope.stringsOf(context);
+    final visuals = context.appVisuals;
 
     return RefreshIndicator(
       onRefresh: _refreshPendingReportCount,
-      color: _deepIndigo,
+      color: visuals.primary,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(
           parent: BouncingScrollPhysics(),
@@ -791,11 +1082,12 @@ class _ReportHomePageState extends State<ReportHomePage> {
           _SectionTopBar(
             title: strings.text('offlineSectionTitle'),
             subtitle: strings.text('offlineSectionSubtitle'),
+            onBackPressed: _goBackToPreviousSection,
             onMenuPressed: _openDrawer,
           ),
           const SizedBox(height: 18),
           _OfflineStatusCard(
-            isOfflineMode: _usingOfflineTaxonomies,
+            isOfflineMode: !_isLiveConnectionAvailable,
             pendingReportCount: _pendingReportCount,
             isSyncing: _isSyncingPendingReports,
             onRetryConnection: _loadTaxonomies,
@@ -821,6 +1113,7 @@ class _ReportHomePageState extends State<ReportHomePage> {
         _SectionTopBar(
           title: strings.text('guideTitle'),
           subtitle: strings.text('guideSubtitle'),
+          onBackPressed: _goBackToPreviousSection,
           onMenuPressed: _openDrawer,
         ),
         const SizedBox(height: 18),
@@ -841,12 +1134,42 @@ class _ReportHomePageState extends State<ReportHomePage> {
     );
   }
 
+  Widget _buildSosSection() {
+    final strings = AppSettingsScope.stringsOf(context);
+
+    return ListView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
+      children: [
+        _SectionTopBar(
+          title: strings.text('sos'),
+          subtitle: strings.text('sosSubtitle'),
+          onBackPressed: _goBackToPreviousSection,
+          onMenuPressed: _openDrawer,
+        ),
+        const SizedBox(height: 18),
+        _SosActionCard(
+          isPreparing: _isPreparingSos,
+          onActivate: _activateSosSupport,
+          onOpenReportForm: _openReportForm,
+          onOpenGuide: () => _openSection(_AppSection.guide),
+        ),
+        const SizedBox(height: 18),
+        _InfoCard(
+          title: strings.text('emergencyGuidance'),
+          body: strings.text('emergencyGuidanceBody'),
+        ),
+      ],
+    );
+  }
+
   Widget _buildSyncCenterSection() {
     final strings = AppSettingsScope.stringsOf(context);
+    final visuals = context.appVisuals;
 
     return RefreshIndicator(
       onRefresh: _handleHomeRefresh,
-      color: _deepIndigo,
+      color: visuals.primary,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(
           parent: BouncingScrollPhysics(),
@@ -856,11 +1179,12 @@ class _ReportHomePageState extends State<ReportHomePage> {
           _SectionTopBar(
             title: strings.text('syncCenterTitle'),
             subtitle: strings.text('syncCenterSubtitle'),
+            onBackPressed: _goBackToPreviousSection,
             onMenuPressed: _openDrawer,
           ),
           const SizedBox(height: 18),
           _SyncStatusCard(
-            isOfflineMode: _usingOfflineTaxonomies,
+            isOfflineMode: !_isLiveConnectionAvailable,
             pendingReportCount: _pendingReportCount,
             isSyncing: _isSyncingPendingReports,
             autoSyncEnabled: _autoSyncEnabled,
@@ -882,6 +1206,7 @@ class _ReportHomePageState extends State<ReportHomePage> {
         _SectionTopBar(
           title: strings.text('settingsTitle'),
           subtitle: strings.text('settingsSubtitle'),
+          onBackPressed: _goBackToPreviousSection,
           onMenuPressed: _openDrawer,
         ),
         const SizedBox(height: 18),
@@ -891,17 +1216,13 @@ class _ReportHomePageState extends State<ReportHomePage> {
           autoSyncEnabled: _autoSyncEnabled,
           locationHintsEnabled: _locationHintsEnabled,
           privacyTipsEnabled: _privacyTipsEnabled,
+          backendUrl: _settingsController.backendUrl,
           onLanguageChanged: _settingsController.setLanguage,
           onThemeModeChanged: _settingsController.setThemeMode,
-          onAutoSyncChanged: (value) {
-            setState(() => _autoSyncEnabled = value);
-          },
-          onLocationHintsChanged: (value) {
-            setState(() => _locationHintsEnabled = value);
-          },
-          onPrivacyTipsChanged: (value) {
-            setState(() => _privacyTipsEnabled = value);
-          },
+          onAutoSyncChanged: _settingsController.setAutoSyncEnabled,
+          onLocationHintsChanged: _settingsController.setLocationHintsEnabled,
+          onPrivacyTipsChanged: _settingsController.setPrivacyTipsEnabled,
+          onBackendUrlSaved: _handleBackendUrlSaved,
         ),
       ],
     );
@@ -917,6 +1238,7 @@ class _ReportHomePageState extends State<ReportHomePage> {
         _SectionTopBar(
           title: strings.text('themeTitle'),
           subtitle: strings.text('themeSubtitle'),
+          onBackPressed: _goBackToPreviousSection,
           onMenuPressed: _openDrawer,
         ),
         const SizedBox(height: 18),
@@ -932,37 +1254,54 @@ class _ReportHomePageState extends State<ReportHomePage> {
   Widget build(BuildContext context) {
     final visuals = context.appVisuals;
 
-    return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: visuals.pageBackground,
-      drawer: Drawer(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: _SafetyDrawer(
-          currentSection: _currentSection,
-          pendingReportCount: _pendingReportCount,
-          usingOfflineTaxonomies: _usingOfflineTaxonomies,
-          onSelectSection: (section) {
-            Navigator.of(context).pop();
-            _openSection(section);
-          },
-        ),
-      ),
-      body: Stack(
-        children: [
-          const Positioned.fill(child: _PageBackdrop()),
-          SafeArea(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 220),
-              child: _buildCurrentSection(),
-            ),
+    return PopScope(
+      canPop: _currentSection == _AppSection.home,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) {
+          return;
+        }
+
+        if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
+          Navigator.of(context).pop();
+          return;
+        }
+
+        _goBackToPreviousSection();
+      },
+      child: Scaffold(
+        key: _scaffoldKey,
+        backgroundColor: visuals.pageBackground,
+        drawer: Drawer(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: _SafetyDrawer(
+            currentUser: widget.currentUser,
+            currentSection: _currentSection,
+            pendingReportCount: _pendingReportCount,
+            isLiveConnectionAvailable: _isLiveConnectionAvailable,
+            onLogout: widget.onLogout,
+            onSelectSection: (section) {
+              Navigator.of(context).pop();
+              _openSection(section);
+            },
           ),
-        ],
-      ),
-      bottomNavigationBar: _BottomQuickNavigation(
-        selectedIndex: _selectedBottomIndex,
-        pendingReportCount: _pendingReportCount,
-        onSelected: _selectBottomDestination,
+        ),
+        body: Stack(
+          children: [
+            const Positioned.fill(child: _PageBackdrop()),
+            SafeArea(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 220),
+                child: _buildCurrentSection(),
+              ),
+            ),
+          ],
+        ),
+        bottomNavigationBar: _BottomQuickNavigation(
+          selectedIndex: _selectedBottomIndex,
+          pendingReportCount: _pendingReportCount,
+          onSelected: _selectBottomDestination,
+        ),
       ),
     );
   }
@@ -972,44 +1311,41 @@ class _SectionTopBar extends StatelessWidget {
   const _SectionTopBar({
     required this.title,
     required this.subtitle,
+    this.onBackPressed,
     this.onMenuPressed,
     this.action,
   });
 
   final String title;
   final String subtitle;
+  final VoidCallback? onBackPressed;
   final VoidCallback? onMenuPressed;
   final Widget? action;
 
   @override
   Widget build(BuildContext context) {
     final visuals = context.appVisuals;
+    final trailingAction =
+        action ??
+        (onBackPressed != null && onMenuPressed != null
+            ? _TopBarIconButton(
+                icon: Icons.menu_rounded,
+                onPressed: onMenuPressed!,
+              )
+            : null);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (onMenuPressed != null)
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: visuals.cardSurface,
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: [
-                BoxShadow(
-                  color: visuals.cardShadow,
-                  blurRadius: 18,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: IconButton(
-              onPressed: onMenuPressed,
-              icon: const Icon(Icons.menu_rounded),
-              color: visuals.deep,
-            ),
+        if (onBackPressed != null || onMenuPressed != null)
+          _TopBarIconButton(
+            icon: onBackPressed != null
+                ? Icons.arrow_back_rounded
+                : Icons.menu_rounded,
+            onPressed: onBackPressed ?? onMenuPressed!,
           ),
-        if (onMenuPressed != null) const SizedBox(width: 14),
+        if (onBackPressed != null || onMenuPressed != null)
+          const SizedBox(width: 14),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1034,11 +1370,47 @@ class _SectionTopBar extends StatelessWidget {
             ],
           ),
         ),
-        if (action != null) ...[
+        if (trailingAction != null) ...[
           const SizedBox(width: 12),
-          action!,
+          trailingAction,
         ],
       ],
+    );
+  }
+}
+
+class _TopBarIconButton extends StatelessWidget {
+  const _TopBarIconButton({
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final visuals = context.appVisuals;
+
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: visuals.cardSurface,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: visuals.cardShadow,
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: IconButton(
+        onPressed: onPressed,
+        icon: Icon(icon),
+        color: visuals.deep,
+      ),
     );
   }
 }
@@ -1342,6 +1714,8 @@ class _PendingQueueCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final strings = AppSettingsScope.stringsOf(context);
+    final visuals = context.appVisuals;
+    final queueSurface = _blendColors(visuals.cardSurface, visuals.primary, 0.10);
 
     if (pendingReports.isEmpty) {
       return Card(
@@ -1353,12 +1727,12 @@ class _PendingQueueCard extends StatelessWidget {
                 width: 70,
                 height: 70,
                 decoration: BoxDecoration(
-                  color: _softPink,
+                  color: queueSurface,
                   borderRadius: BorderRadius.circular(22),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.cloud_done_rounded,
-                  color: _primaryIndigo,
+                  color: visuals.primary,
                   size: 32,
                 ),
               ),
@@ -1375,7 +1749,10 @@ class _PendingQueueCard extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: Theme.of(
                   context,
-                ).textTheme.bodyMedium?.copyWith(color: _mutedText, height: 1.5),
+                ).textTheme.bodyMedium?.copyWith(
+                  color: visuals.muted,
+                  height: 1.5,
+                ),
               ),
               const SizedBox(height: 16),
               FilledButton.icon(
@@ -1408,7 +1785,7 @@ class _PendingQueueCard extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: _softPink,
+                    color: queueSurface,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -1418,12 +1795,12 @@ class _PendingQueueCard extends StatelessWidget {
                         width: 42,
                         height: 42,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: visuals.cardSurface,
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.schedule_send_rounded,
-                          color: _primaryIndigo,
+                          color: visuals.primary,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -1435,16 +1812,16 @@ class _PendingQueueCard extends StatelessWidget {
                               report.approxAreaName.isEmpty
                                   ? strings.text('offlineReport')
                                   : report.approxAreaName,
-                              style: const TextStyle(
-                                color: _deepIndigo,
+                              style: TextStyle(
+                                color: visuals.deep,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              "${strings.categoryName(report.categoryCode, report.categoryCode)} • ${strings.locationTypeName(report.locationTypeCode, report.locationTypeCode)}",
-                              style: const TextStyle(
-                                color: _mutedText,
+                              "${strings.categoryName(report.categoryCode, report.categoryCode)} â€¢ ${strings.locationTypeName(report.locationTypeCode, report.locationTypeCode)}",
+                              style: TextStyle(
+                                color: visuals.muted,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -1453,7 +1830,7 @@ class _PendingQueueCard extends StatelessWidget {
                               strings.text('queuedAt', {
                                 'time': _formatDateTime(report.queuedAt),
                               }),
-                              style: const TextStyle(color: _mutedText),
+                              style: TextStyle(color: visuals.muted),
                             ),
                           ],
                         ),
@@ -1501,7 +1878,7 @@ class _SyncStatusCard extends StatelessWidget {
               strings.text('connectionSnapshot'),
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w900,
-              ),
+              )
             ),
             const SizedBox(height: 14),
             _StatusRow(
@@ -1556,6 +1933,8 @@ class _StatusRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final visuals = context.appVisuals;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -1565,13 +1944,13 @@ class _StatusRow extends StatelessWidget {
               label,
               style: Theme.of(
                 context,
-              ).textTheme.bodyMedium?.copyWith(color: _mutedText),
+              ).textTheme.bodyMedium?.copyWith(color: visuals.muted),
             ),
           ),
           Text(
             value,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: _deepIndigo,
+              color: visuals.deep,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -1581,18 +1960,20 @@ class _StatusRow extends StatelessWidget {
   }
 }
 
-class _SettingsCard extends StatelessWidget {
+class _SettingsCard extends StatefulWidget {
   const _SettingsCard({
     required this.language,
     required this.themeMode,
     required this.autoSyncEnabled,
     required this.locationHintsEnabled,
     required this.privacyTipsEnabled,
+    required this.backendUrl,
     required this.onLanguageChanged,
     required this.onThemeModeChanged,
     required this.onAutoSyncChanged,
     required this.onLocationHintsChanged,
     required this.onPrivacyTipsChanged,
+    required this.onBackendUrlSaved,
   });
 
   final AppLanguage language;
@@ -1600,15 +1981,68 @@ class _SettingsCard extends StatelessWidget {
   final bool autoSyncEnabled;
   final bool locationHintsEnabled;
   final bool privacyTipsEnabled;
+  final String backendUrl;
   final ValueChanged<AppLanguage> onLanguageChanged;
   final ValueChanged<ThemeMode> onThemeModeChanged;
   final ValueChanged<bool> onAutoSyncChanged;
   final ValueChanged<bool> onLocationHintsChanged;
   final ValueChanged<bool> onPrivacyTipsChanged;
+  final Future<void> Function(String) onBackendUrlSaved;
+
+  @override
+  State<_SettingsCard> createState() => _SettingsCardState();
+}
+
+class _SettingsCardState extends State<_SettingsCard> {
+  late final TextEditingController _backendUrlController;
+  bool _isSavingBackendUrl = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _backendUrlController = TextEditingController(text: widget.backendUrl);
+  }
+
+  @override
+  void didUpdateWidget(covariant _SettingsCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.backendUrl != widget.backendUrl &&
+        _backendUrlController.text != widget.backendUrl) {
+      _backendUrlController.text = widget.backendUrl;
+    }
+  }
+
+  @override
+  void dispose() {
+    _backendUrlController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveBackendUrl() async {
+    if (_isSavingBackendUrl) {
+      return;
+    }
+
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _isSavingBackendUrl = true;
+    });
+
+    try {
+      await widget.onBackendUrlSaved(_backendUrlController.text);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSavingBackendUrl = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final strings = AppSettingsScope.stringsOf(context);
+    final visuals = context.appVisuals;
 
     return Card(
       child: Padding(
@@ -1616,6 +2050,67 @@ class _SettingsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Text(
+              strings.text('backendServerTitle'),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              strings.text('backendServerSubtitle'),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: visuals.muted,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _backendUrlController,
+              keyboardType: TextInputType.url,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _saveBackendUrl(),
+              decoration: InputDecoration(
+                labelText: strings.text('backendUrlLabel'),
+                hintText: strings.text('backendUrlHint'),
+                prefixIcon: const Icon(Icons.router_outlined),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              strings.text('backendWifiHelp'),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: visuals.muted,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              strings.text('backendUsbHelp'),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: visuals.muted,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _isSavingBackendUrl ? null : _saveBackendUrl,
+                icon: _isSavingBackendUrl
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.cloud_sync_outlined),
+                label: Text(strings.text('saveBackendUrl')),
+              ),
+            ),
+            const SizedBox(height: 22),
             Text(
               strings.text('languageSetting'),
               style: Theme.of(
@@ -1632,10 +2127,10 @@ class _SettingsCard extends StatelessWidget {
                     ),
                   )
                   .toList(growable: false),
-              selected: {language},
+              selected: {widget.language},
               onSelectionChanged: (selection) {
                 if (selection.isNotEmpty) {
-                  onLanguageChanged(selection.first);
+                  widget.onLanguageChanged(selection.first);
                 }
               },
             ),
@@ -1658,11 +2153,11 @@ class _SettingsCard extends StatelessWidget {
                   icon: Icon(Icons.dark_mode_outlined),
                 ),
               ],
-              selected: {themeMode},
+              selected: {widget.themeMode},
               showSelectedIcon: false,
               onSelectionChanged: (selection) {
                 if (selection.isNotEmpty) {
-                  onThemeModeChanged(selection.first);
+                  widget.onThemeModeChanged(selection.first);
                 }
               },
             ),
@@ -1680,8 +2175,8 @@ class _SettingsCard extends StatelessWidget {
             ),
             const SizedBox(height: 22),
             SwitchListTile(
-              value: autoSyncEnabled,
-              onChanged: onAutoSyncChanged,
+              value: widget.autoSyncEnabled,
+              onChanged: widget.onAutoSyncChanged,
               contentPadding: EdgeInsets.zero,
               title: Text(strings.text('autoSyncTitle')),
               subtitle: Text(
@@ -1689,8 +2184,8 @@ class _SettingsCard extends StatelessWidget {
               ),
             ),
             SwitchListTile(
-              value: locationHintsEnabled,
-              onChanged: onLocationHintsChanged,
+              value: widget.locationHintsEnabled,
+              onChanged: widget.onLocationHintsChanged,
               contentPadding: EdgeInsets.zero,
               title: Text(strings.text('locationHintsTitle')),
               subtitle: Text(
@@ -1698,8 +2193,8 @@ class _SettingsCard extends StatelessWidget {
               ),
             ),
             SwitchListTile(
-              value: privacyTipsEnabled,
-              onChanged: onPrivacyTipsChanged,
+              value: widget.privacyTipsEnabled,
+              onChanged: widget.onPrivacyTipsChanged,
               contentPadding: EdgeInsets.zero,
               title: Text(strings.text('privacyTipsTitle')),
               subtitle: Text(
@@ -1796,7 +2291,10 @@ class _ThemeGalleryCard extends StatelessWidget {
                             Text(
                               strings.themePresetDescription(preset),
                               style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(color: _mutedText, height: 1.4),
+                                  ?.copyWith(
+                                    color: visuals.muted,
+                                    height: 1.4,
+                                  ),
                             ),
                           ],
                         ),
@@ -1806,7 +2304,7 @@ class _ThemeGalleryCard extends StatelessWidget {
                         selected
                             ? Icons.check_circle_rounded
                             : Icons.radio_button_unchecked_rounded,
-                        color: selected ? visuals.primary : _mutedText,
+                        color: selected ? visuals.primary : visuals.muted,
                       ),
                     ],
                   ),
@@ -1835,17 +2333,150 @@ class _ThemeColorDot extends StatelessWidget {
   }
 }
 
+class _SosActionCard extends StatelessWidget {
+  const _SosActionCard({
+    required this.isPreparing,
+    required this.onActivate,
+    required this.onOpenReportForm,
+    required this.onOpenGuide,
+  });
+
+  final bool isPreparing;
+  final Future<void> Function() onActivate;
+  final Future<void> Function() onOpenReportForm;
+  final VoidCallback onOpenGuide;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppSettingsScope.stringsOf(context);
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFE5484D), Color(0xFFFF8B5E)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x44E5484D),
+            blurRadius: 26,
+            offset: Offset(0, 16),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(22),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 54,
+              height: 54,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
+              ),
+              child: const Icon(
+                Icons.notification_important_rounded,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              strings.text('sosActionTitle'),
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              strings.text('sosActionBody'),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Colors.white.withValues(alpha: 0.92),
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 18),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: isPreparing ? null : onActivate,
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.white.withValues(alpha: 0.7),
+                  foregroundColor: const Color(0xFFD63D45),
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                ),
+                icon: isPreparing
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Color(0xFFD63D45),
+                        ),
+                      )
+                    : const Icon(Icons.copy_rounded),
+                label: Text(
+                  strings.text('sosPrimaryAction'),
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: onOpenReportForm,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    backgroundColor: Colors.white.withValues(alpha: 0.08),
+                    side: BorderSide(color: Colors.white.withValues(alpha: 0.24)),
+                  ),
+                  icon: const Icon(Icons.edit_note_rounded),
+                  label: Text(strings.text('openReportForm')),
+                ),
+                OutlinedButton.icon(
+                  onPressed: onOpenGuide,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    backgroundColor: Colors.white.withValues(alpha: 0.08),
+                    side: BorderSide(color: Colors.white.withValues(alpha: 0.24)),
+                  ),
+                  icon: const Icon(Icons.shield_outlined),
+                  label: Text(strings.text('drawerGuide')),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _SafetyDrawer extends StatelessWidget {
   const _SafetyDrawer({
+    required this.currentUser,
     required this.currentSection,
     required this.pendingReportCount,
-    required this.usingOfflineTaxonomies,
+    required this.isLiveConnectionAvailable,
+    required this.onLogout,
     required this.onSelectSection,
   });
 
+  final AuthenticatedUser currentUser;
   final _AppSection currentSection;
   final int pendingReportCount;
-  final bool usingOfflineTaxonomies;
+  final bool isLiveConnectionAvailable;
+  final Future<void> Function() onLogout;
   final ValueChanged<_AppSection> onSelectSection;
 
   @override
@@ -1892,12 +2523,30 @@ class _SafetyDrawer extends StatelessWidget {
                     ),
                   ),
                 ),*/
-                if (usingOfflineTaxonomies)
-                  _StatusPill(
-                    label: strings.text('offline'),
-                    color: visuals.primary,
-                  ),
+                _StatusPill(
+                  label: isLiveConnectionAvailable
+                      ? strings.text('online')
+                      : strings.text('offline'),
+                  color: isLiveConnectionAvailable
+                      ? AppPalette.blush
+                      : visuals.primary,
+                ),
               ],
+            ),
+            const SizedBox(height: 18),
+            Text(
+              currentUser.fullName,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: visuals.deep,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              currentUser.email,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: visuals.muted,
+              ),
             ),
             const SizedBox(height: 24),
             _DrawerNavTile(
@@ -1943,6 +2592,20 @@ class _SafetyDrawer extends StatelessWidget {
               selected: currentSection == _AppSection.settings,
               onTap: () => onSelectSection(_AppSection.settings),
             ),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Divider(height: 1),
+            ),
+            _DrawerNavTile(
+              icon: Icons.logout_rounded,
+              label: strings.text('drawerLogout'),
+              selected: false,
+              danger: true,
+              onTap: () {
+                Navigator.of(context).pop();
+                onLogout();
+              },
+            ),
           ],
         ),
       ),
@@ -1957,6 +2620,7 @@ class _DrawerNavTile extends StatelessWidget {
     required this.selected,
     required this.onTap,
     this.badge,
+    this.danger = false,
   });
 
   final IconData icon;
@@ -1964,9 +2628,38 @@ class _DrawerNavTile extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
   final String? badge;
+  final bool danger;
 
   @override
   Widget build(BuildContext context) {
+    final visuals = context.appVisuals;
+    final theme = Theme.of(context);
+    final selectedBackground = danger
+        ? _blendColors(
+            visuals.cardSurface,
+            theme.colorScheme.error,
+            0.14,
+          )
+        : _blendColors(
+            visuals.cardSurface,
+            visuals.primary,
+            theme.brightness == Brightness.dark ? 0.24 : 0.14,
+          );
+    final foregroundColor = selected
+        ? _bestContrastingColor(
+            selectedBackground,
+            light: Colors.white,
+            dark: visuals.deep,
+          )
+        : danger
+        ? theme.colorScheme.error
+        : visuals.deep.withValues(alpha: 0.9);
+    final borderColor = selected
+        ? (danger ? theme.colorScheme.error : visuals.primary).withValues(
+            alpha: 0.28,
+          )
+        : Colors.transparent;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Material(
@@ -1977,18 +2670,19 @@ class _DrawerNavTile extends StatelessWidget {
           child: Ink(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
             decoration: BoxDecoration(
-              color: selected ? const Color(0xFFE8EEFF) : Colors.transparent,
+              color: selected ? selectedBackground : Colors.transparent,
               borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: borderColor),
             ),
             child: Row(
               children: [
-                Icon(icon, color: selected ? _primaryIndigo : _deepIndigo),
+                Icon(icon, color: foregroundColor),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     label,
                     style: TextStyle(
-                      color: selected ? _primaryIndigo : _deepIndigo,
+                      color: foregroundColor,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -2000,7 +2694,7 @@ class _DrawerNavTile extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: _primaryIndigo,
+                      color: visuals.primary,
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
@@ -2028,7 +2722,7 @@ class _BottomQuickNavigation extends StatelessWidget {
     required this.onSelected,
   });
 
-  final int selectedIndex;
+  final int? selectedIndex;
   final int pendingReportCount;
   final ValueChanged<int> onSelected;
 
@@ -2037,10 +2731,14 @@ class _BottomQuickNavigation extends StatelessWidget {
     final strings = AppSettingsScope.stringsOf(context);
     final visuals = context.appVisuals;
     final items = [
-      (icon: Icons.home_outlined, label: strings.text('drawerHome')),
-      (icon: Icons.edit_note_rounded, label: strings.text('report')),
-      (icon: Icons.cloud_upload_outlined, label: strings.text('savedOffline')),
-      (icon: Icons.shield_outlined, label: strings.text('guide')),
+      _BottomNavEntry(icon: Icons.home_outlined, label: strings.text('drawerHome')),
+      _BottomNavEntry(icon: Icons.edit_note_rounded, label: strings.text('report')),
+      _BottomNavEntry(
+        icon: Icons.cloud_upload_outlined,
+        label: strings.text('savedOffline'),
+        showsBadge: true,
+      ),
+      _BottomNavEntry(label: strings.text('sos')),
     ];
 
     return DecoratedBox(
@@ -2065,9 +2763,28 @@ class _BottomQuickNavigation extends StatelessWidget {
             children: List.generate(items.length, (index) {
               final item = items[index];
               final selected = selectedIndex == index;
-              final badge = index == 2 && pendingReportCount > 0
+              final badge = item.showsBadge && pendingReportCount > 0
                   ? pendingReportCount.toString()
                   : null;
+              final selectedFill = _blendColors(
+                visuals.navBackground,
+                visuals.primary,
+                0.30,
+              );
+              final selectedBorder = visuals.primary.withValues(alpha: 0.46);
+              final foregroundColor = selected
+                  ? _bestContrastingColor(
+                      selectedFill,
+                      light: Colors.white,
+                      dark: visuals.deep,
+                    )
+                  : visuals.deep.withValues(alpha: 0.76);
+              final backgroundColor = selected
+                  ? selectedFill
+                  : Colors.transparent;
+              final borderColor = selected
+                  ? selectedBorder
+                  : Colors.transparent;
 
               return Expanded(
                 child: Padding(
@@ -2077,58 +2794,70 @@ class _BottomQuickNavigation extends StatelessWidget {
                     child: InkWell(
                       onTap: () => onSelected(index),
                       borderRadius: BorderRadius.circular(18),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 180),
-                        curve: Curves.easeOut,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: selected
-                              ? visuals.primary.withValues(alpha: 0.18)
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: selected
-                                ? visuals.primary.withValues(alpha: 0.28)
-                                : Colors.transparent,
+                      child: Semantics(
+                        button: true,
+                        selected: selected,
+                        label: item.label,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          curve: Curves.easeOut,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: backgroundColor,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: borderColor,
+                            ),
                           ),
-                        ),
-                        child: Center(
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              Icon(
-                                item.icon,
-                                size: 24,
-                                color: selected ? Colors.white : visuals.muted,
-                              ),
-                              if (badge != null)
-                                Positioned(
-                                  right: -10,
-                                  top: -8,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 5,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: visuals.bright,
-                                      borderRadius: BorderRadius.circular(999),
-                                      border: Border.all(
-                                        color: visuals.navBackground,
-                                        width: 1.4,
+                          child: Center(
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                if (item.icon != null)
+                                  Icon(
+                                    item.icon,
+                                    size: 24,
+                                    color: foregroundColor,
+                                  )
+                                else
+                                  Text(
+                                    item.label,
+                                    style: Theme.of(context).textTheme.labelLarge
+                                        ?.copyWith(
+                                          color: foregroundColor,
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: 0.2,
+                                        ),
+                                  ),
+                                if (badge != null)
+                                  Positioned(
+                                    right: -10,
+                                    top: -8,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 5,
+                                        vertical: 2,
                                       ),
-                                    ),
-                                    child: Text(
-                                      badge,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w800,
+                                      decoration: BoxDecoration(
+                                        color: visuals.bright,
+                                        borderRadius: BorderRadius.circular(999),
+                                        border: Border.all(
+                                          color: visuals.navBackground,
+                                          width: 1.4,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        badge,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w800,
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -2142,6 +2871,18 @@ class _BottomQuickNavigation extends StatelessWidget {
       ),
     );
   }
+}
+
+class _BottomNavEntry {
+  const _BottomNavEntry({
+    this.icon,
+    required this.label,
+    this.showsBadge = false,
+  });
+
+  final IconData? icon;
+  final String label;
+  final bool showsBadge;
 }
 
 class _PageBackdrop extends StatelessWidget {
@@ -2218,14 +2959,46 @@ class _HeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final textTheme = Theme.of(context).textTheme;
     final strings = AppSettingsScope.stringsOf(context);
+    final visuals = context.appVisuals;
+    final isDark = theme.brightness == Brightness.dark;
+    final heroBase = _blendColors(
+      visuals.navBackground,
+      visuals.cardSurface,
+      isDark ? 0.70 : 0.48,
+    );
+    final heroMid = _blendColors(
+      visuals.cardSurface,
+      visuals.softSurface,
+      isDark ? 0.74 : 0.42,
+    );
+    final heroEnd = _blendColors(
+      visuals.cardSurface,
+      visuals.primary,
+      isDark ? 0.10 : 0.08,
+    );
+    final heroButtonColor = _blendColors(
+      visuals.cardSurface,
+      visuals.accent,
+      isDark ? 0.18 : 0.14,
+    );
+    final heroAccent = _bestContrastingColor(
+      heroButtonColor,
+      light: Colors.white,
+      dark: visuals.deep,
+    );
 
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(34),
-        boxShadow: const [
-          BoxShadow(color: _cardShadow, blurRadius: 28, offset: Offset(0, 18)),
+        boxShadow: [
+          BoxShadow(
+            color: visuals.cardShadow.withValues(alpha: isDark ? 0.40 : 0.22),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
         ],
       ),
       child: ClipRRect(
@@ -2233,31 +3006,49 @@ class _HeroCard extends StatelessWidget {
         child: Stack(
           children: [
             Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [_deepIndigo, _primaryIndigo, _brightIndigo],
+                  colors: [heroBase, heroMid, heroEnd],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: isDark ? 0.05 : 0.08),
+                ),
               ),
             ),
-            const Positioned(
+            Positioned(
               top: -14,
               right: -10,
-              child: _HeroOrb(size: 120, color: Color(0xCC14DEC8)),
+              child: _HeroOrb(
+                size: 120,
+                color: visuals.accent.withValues(alpha: isDark ? 0.16 : 0.12),
+              ),
             ),
-            const Positioned(
+            Positioned(
               bottom: -54,
               left: -36,
-              child: _HeroOrb(size: 170, color: Color(0xCC11D1C8)),
+              child: _HeroOrb(
+                size: 170,
+                color: visuals.deep.withValues(alpha: isDark ? 0.12 : 0.06),
+              ),
             ),
-            const Positioned(
+            Positioned(
               top: 44,
               left: 18,
-              child: _HeroOrb(size: 20, color: Color(0xFF14DEC8)),
+              child: _HeroOrb(
+                size: 20,
+                color: visuals.accent.withValues(alpha: isDark ? 0.32 : 0.26),
+              ),
             ),
-            const Positioned.fill(
-              child: CustomPaint(painter: _HeroLinePainter()),
+            Positioned.fill(
+              child: CustomPaint(
+                painter: _HeroLinePainter(
+                  strokeColor: Colors.white.withValues(alpha: isDark ? 0.10 : 0.08),
+                  fillColor: Colors.white.withValues(alpha: isDark ? 0.03 : 0.025),
+                  glowColor: Colors.white.withValues(alpha: isDark ? 0.025 : 0.02),
+                ),
+              ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 24, 24, 26),
@@ -2272,13 +3063,15 @@ class _HeroCard extends StatelessWidget {
                           vertical: 7,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0x1DFFFFFF),
+                          color: Colors.white.withValues(alpha: isDark ? 0.07 : 0.08),
                           borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: const Color(0x22FFFFFF)),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: isDark ? 0.10 : 0.12),
+                          ),
                         ),
                         child: Text(
                           strings.text('anonymousReporting'),
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.3,
@@ -2296,16 +3089,22 @@ class _HeroCard extends StatelessWidget {
                   const SizedBox(height: 24),
                   RichText(
                     text: TextSpan(
-                      style: textTheme.headlineLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
+                        style: textTheme.headlineLarge?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
                         height: 0.96,
                       ),
                       children: [
                         TextSpan(text: strings.text('heroTitleA')),
                         TextSpan(
                           text: strings.text('heroTitleB'),
-                          style: TextStyle(color: _mint),
+                          style: TextStyle(
+                            color: _blendColors(
+                              Colors.white,
+                              visuals.accentGold,
+                              isDark ? 0.38 : 0.32,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -2314,7 +3113,7 @@ class _HeroCard extends StatelessWidget {
                   Text(
                     strings.text('heroBody'),
                     style: textTheme.bodyMedium?.copyWith(
-                      color: const Color(0xE2F6F4FF),
+                      color: Colors.white.withValues(alpha: isDark ? 0.74 : 0.72),
                       height: 1.5,
                       fontWeight: FontWeight.w500,
                     ),
@@ -2327,9 +3126,11 @@ class _HeroCard extends StatelessWidget {
                       OutlinedButton(
                         onPressed: onOpenForm,
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          backgroundColor: const Color(0x14FFFFFF),
-                          side: const BorderSide(color: Color(0x30FFFFFF)),
+                          foregroundColor: heroAccent,
+                          backgroundColor: heroButtonColor,
+                          side: BorderSide(
+                            color: Colors.white.withValues(alpha: isDark ? 0.12 : 0.14),
+                          ),
                           padding: const EdgeInsets.symmetric(
                             horizontal: 22,
                             vertical: 16,
@@ -2369,17 +3170,25 @@ class _HeroOrb extends StatelessWidget {
 }
 
 class _HeroLinePainter extends CustomPainter {
-  const _HeroLinePainter();
+  const _HeroLinePainter({
+    required this.strokeColor,
+    required this.fillColor,
+    required this.glowColor,
+  });
+
+  final Color strokeColor;
+  final Color fillColor;
+  final Color glowColor;
 
   @override
   void paint(Canvas canvas, Size size) {
     final stroke = Paint()
-      ..color = const Color(0x40FFFFFF)
+      ..color = strokeColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.2;
 
     final fill = Paint()
-      ..color = const Color(0x14FFFFFF)
+      ..color = fillColor
       ..style = PaintingStyle.fill;
 
     final topPath = Path()
@@ -2427,7 +3236,7 @@ class _HeroLinePainter extends CustomPainter {
     canvas.drawCircle(
       Offset(size.width * 0.44, size.height * 0.20),
       36,
-      Paint()..color = const Color(0x10FFFFFF),
+      Paint()..color = glowColor,
     );
   }
 
@@ -2441,6 +3250,7 @@ class _QuickStepsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final strings = AppSettingsScope.stringsOf(context);
+    final visuals = context.appVisuals;
 
     return Card(
       child: Padding(
@@ -2459,7 +3269,10 @@ class _QuickStepsCard extends StatelessWidget {
               strings.text('reportFlowBody'),
               style: Theme.of(
                 context,
-              ).textTheme.bodyMedium?.copyWith(color: _mutedText, height: 1.45),
+              ).textTheme.bodyMedium?.copyWith(
+                color: visuals.muted,
+                height: 1.45,
+              ),
             ),
             const SizedBox(height: 18),
             Wrap(
@@ -2469,22 +3282,22 @@ class _QuickStepsCard extends StatelessWidget {
                 _StepBubble(
                   icon: Icons.shield_outlined,
                   label: strings.text('quickStep1'),
-                  color: _primaryIndigo,
+                  color: visuals.primary,
                 ),
                 _StepBubble(
                   icon: Icons.place_outlined,
                   label: strings.text('quickStep2'),
-                  color: Color(0xFFFFC24B),
+                  color: visuals.accentGold,
                 ),
                 _StepBubble(
                   icon: Icons.notes_rounded,
                   label: strings.text('quickStep3'),
-                  color: _mint,
+                  color: visuals.accent,
                 ),
                 _StepBubble(
                   icon: Icons.send_rounded,
                   label: strings.text('quickStep4'),
-                  color: _pink,
+                  color: visuals.bright,
                 ),
               ],
             ),
@@ -2508,6 +3321,8 @@ class _StepBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final visuals = context.appVisuals;
+
     return SizedBox(
       width: 74,
       child: Column(
@@ -2533,7 +3348,7 @@ class _StepBubble extends StatelessWidget {
             label,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: _deepIndigo,
+              color: visuals.deep,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -2551,6 +3366,8 @@ class _InfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final visuals = context.appVisuals;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(22),
@@ -2561,12 +3378,12 @@ class _InfoCard extends StatelessWidget {
               width: 46,
               height: 46,
               decoration: BoxDecoration(
-                color: _softLilac,
+                color: _blendColors(visuals.cardSurface, visuals.primary, 0.12),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.support_agent_rounded,
-                color: _primaryIndigo,
+                color: visuals.primary,
               ),
             ),
             const SizedBox(width: 14),
@@ -2584,7 +3401,7 @@ class _InfoCard extends StatelessWidget {
                   Text(
                     body,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: _mutedText,
+                      color: visuals.muted,
                       height: 1.5,
                     ),
                   ),
@@ -2604,13 +3421,14 @@ class _LoadingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final strings = AppSettingsScope.stringsOf(context);
+    final visuals = context.appVisuals;
 
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(30),
         child: Column(
           children: [
-            CircularProgressIndicator(color: _primaryIndigo),
+            CircularProgressIndicator(color: visuals.primary),
             const SizedBox(height: 16),
             Text(strings.text('loadingTaxonomies')),
           ],
@@ -2638,6 +3456,7 @@ class _OfflineStatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final strings = AppSettingsScope.stringsOf(context);
+    final visuals = context.appVisuals;
     final title = isOfflineMode
         ? strings.text('offlineStatusTitle')
         : strings.text('offlineStatusTitleSaved');
@@ -2671,7 +3490,10 @@ class _OfflineStatusCard extends StatelessWidget {
               body,
               style: Theme.of(
                 context,
-              ).textTheme.bodyMedium?.copyWith(color: _mutedText, height: 1.5),
+              ).textTheme.bodyMedium?.copyWith(
+                color: visuals.muted,
+                height: 1.5,
+              ),
             ),
             const SizedBox(height: 18),
             FilledButton(
@@ -2697,10 +3519,13 @@ class _SubmissionResultCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isQueuedOffline = result.status.toLowerCase().contains("queued");
-    final statusColor = isQueuedOffline ? _primaryIndigo : _mint;
-    final statusBackground = isQueuedOffline
-        ? const Color(0xFFFBE8F1)
-        : const Color(0xFFE7FFF8);
+    final visuals = context.appVisuals;
+    final statusColor = isQueuedOffline ? visuals.primary : visuals.accent;
+    final statusBackground = _blendColors(
+      visuals.cardSurface,
+      statusColor,
+      0.14,
+    );
     final strings = AppSettingsScope.stringsOf(context);
     final resultTitle = isQueuedOffline
         ? strings.text('savedOfflineTitle')
@@ -2748,7 +3573,7 @@ class _SubmissionResultCard extends StatelessWidget {
             Text(
               "$referenceLabel: ${result.publicReference}",
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: _deepIndigo,
+                color: visuals.deep,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -2759,7 +3584,10 @@ class _SubmissionResultCard extends StatelessWidget {
               result.message,
               style: Theme.of(
                 context,
-              ).textTheme.bodyMedium?.copyWith(color: _mutedText, height: 1.5),
+              ).textTheme.bodyMedium?.copyWith(
+                color: visuals.muted,
+                height: 1.5,
+              ),
             ),
           ],
         ),
@@ -2815,8 +3643,28 @@ class _ReportFormCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final strings = AppSettingsScope.stringsOf(context);
+    final visuals = context.appVisuals;
     final completion = _completionValue();
     final completedItems = _completedItems();
+    final locationPanelColor = _blendColors(
+      visuals.cardSurface,
+      hasCapturedLocation ? visuals.accent : visuals.primary,
+      hasCapturedLocation ? 0.12 : 0.06,
+    );
+    final locationBorderColor = (hasCapturedLocation
+            ? visuals.accent
+            : visuals.primary)
+        .withValues(alpha: 0.26);
+    final consentPanelColor = _blendColors(
+      visuals.cardSurface,
+      visuals.primary,
+      0.08,
+    );
+    final submitForeground = _bestContrastingColor(
+      visuals.primary,
+      light: Colors.white,
+      dark: visuals.deep,
+    );
 
     return Card(
       child: Padding(
@@ -2838,7 +3686,7 @@ class _ReportFormCard extends StatelessWidget {
               Text(
                 strings.text('reportFormBody'),
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: _mutedText,
+                  color: visuals.muted,
                   height: 1.5,
                 ),
               ),
@@ -2851,15 +3699,17 @@ class _ReportFormCard extends StatelessWidget {
                         'count': completedItems.toString(),
                       }),
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: _deepIndigo,
+                        color: visuals.deep,
                         fontWeight: FontWeight.w700,
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  const SizedBox(width: 12),
                   Text(
                     "${(completion * 100).round()}%",
                     style: theme.textTheme.titleMedium?.copyWith(
-                      color: _primaryIndigo,
+                      color: visuals.primary,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -2873,6 +3723,7 @@ class _ReportFormCard extends StatelessWidget {
                   "category-${selectedCategory?.code ?? 'none'}",
                 ),
                 initialValue: selectedCategory,
+                isExpanded: true,
                 decoration: InputDecoration(
                   labelText: strings.text('incidentCategory'),
                 ),
@@ -2880,7 +3731,11 @@ class _ReportFormCard extends StatelessWidget {
                     .map(
                       (item) => DropdownMenuItem(
                         value: item,
-                        child: Text(strings.categoryName(item.code, item.name)),
+                        child: Text(
+                          strings.categoryName(item.code, item.name),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
                       ),
                     )
                     .toList(growable: false),
@@ -2892,6 +3747,7 @@ class _ReportFormCard extends StatelessWidget {
                   "location-${selectedLocationType?.code ?? 'none'}",
                 ),
                 initialValue: selectedLocationType,
+                isExpanded: true,
                 decoration: InputDecoration(
                   labelText: strings.text('locationType'),
                 ),
@@ -2901,6 +3757,8 @@ class _ReportFormCard extends StatelessWidget {
                         value: item,
                         child: Text(
                           strings.locationTypeName(item.code, item.name),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
                       ),
                     )
@@ -2941,14 +3799,10 @@ class _ReportFormCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: hasCapturedLocation
-                      ? const Color(0xFFF0FFFB)
-                      : const Color(0xFFF7F7FF),
+                  color: locationPanelColor,
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: hasCapturedLocation
-                        ? const Color(0x3314DEC8)
-                        : const Color(0x1A3E42D3),
+                    color: locationBorderColor,
                   ),
                 ),
                 child: Column(
@@ -2960,7 +3814,13 @@ class _ReportFormCard extends StatelessWidget {
                           width: 42,
                           height: 42,
                           decoration: BoxDecoration(
-                            color: hasCapturedLocation ? _mint : _softLilac,
+                            color: hasCapturedLocation
+                                ? visuals.accent
+                                : _blendColors(
+                                    visuals.cardSurface,
+                                    visuals.primary,
+                                    0.14,
+                                  ),
                             borderRadius: BorderRadius.circular(14),
                           ),
                           child: Icon(
@@ -2968,8 +3828,12 @@ class _ReportFormCard extends StatelessWidget {
                                 ? Icons.my_location_rounded
                                 : Icons.location_searching_rounded,
                             color: hasCapturedLocation
-                                ? Colors.white
-                                : _primaryIndigo,
+                                ? _bestContrastingColor(
+                                    visuals.accent,
+                                    light: Colors.white,
+                                    dark: visuals.deep,
+                                  )
+                                : visuals.primary,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -2991,7 +3855,7 @@ class _ReportFormCard extends StatelessWidget {
                                     ? strings.text('currentLocationBody')
                                     : strings.text('attachLocationBody'),
                                 style: theme.textTheme.bodySmall?.copyWith(
-                                  color: _mutedText,
+                                  color: visuals.muted,
                                   height: 1.45,
                                 ),
                               ),
@@ -3046,9 +3910,11 @@ class _ReportFormCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: _softLilac,
+                  color: consentPanelColor,
                   borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: const Color(0x1E3E42D3)),
+                  border: Border.all(
+                    color: visuals.primary.withValues(alpha: 0.16),
+                  ),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -3074,13 +3940,13 @@ class _ReportFormCard extends StatelessWidget {
                 width: double.infinity,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [_mint, _primaryIndigo],
+                    gradient: LinearGradient(
+                      colors: [visuals.accent, visuals.primary],
                     ),
                     borderRadius: BorderRadius.circular(999),
-                    boxShadow: const [
+                    boxShadow: [
                       BoxShadow(
-                        color: Color(0x2214DEC8),
+                        color: visuals.primary.withValues(alpha: 0.24),
                         blurRadius: 20,
                         offset: Offset(0, 10),
                       ),
@@ -3092,16 +3958,16 @@ class _ReportFormCard extends StatelessWidget {
                       backgroundColor: Colors.transparent,
                       disabledBackgroundColor: Colors.transparent,
                       shadowColor: Colors.transparent,
-                      foregroundColor: Colors.white,
+                      foregroundColor: submitForeground,
                       padding: const EdgeInsets.symmetric(vertical: 18),
                     ),
                     icon: isSubmitting
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 18,
                             height: 18,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: Colors.white,
+                              color: submitForeground,
                             ),
                           )
                         : const Icon(Icons.send_rounded),
@@ -3169,13 +4035,19 @@ class _FormShowcaseBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final visuals = context.appVisuals;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(26),
       child: Container(
         height: 138,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [_softPink, Color(0xFFFBD2DB), Color(0xFFD7D8FF)],
+            colors: [
+              _blendColors(visuals.cardSurface, visuals.blush, 0.70),
+              _blendColors(visuals.cardSurface, visuals.bright, 0.34),
+              _blendColors(visuals.cardSurface, visuals.primary, 0.18),
+            ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -3193,7 +4065,7 @@ class _FormShowcaseBanner extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: _pink,
+                    color: visuals.bright,
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
@@ -3208,7 +4080,7 @@ class _FormShowcaseBanner extends StatelessWidget {
                   width: 104,
                   height: 26,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFC14B),
+                    color: visuals.accentGold,
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
@@ -3220,7 +4092,15 @@ class _FormShowcaseBanner extends StatelessWidget {
               child: SizedBox(
                 width: 96,
                 height: 48,
-                child: CustomPaint(painter: _BannerLinePainter()),
+                child: CustomPaint(
+                  painter: _BannerLinePainter(
+                    color: _bestContrastingColor(
+                      visuals.primary,
+                      light: Colors.white,
+                      dark: visuals.deep,
+                    ),
+                  ),
+                ),
               ),
             ),
           ],
@@ -3249,10 +4129,14 @@ class _CloudShape extends StatelessWidget {
 }
 
 class _BannerLinePainter extends CustomPainter {
+  const _BannerLinePainter({required this.color});
+
+  final Color color;
+
   @override
   void paint(Canvas canvas, Size size) {
     final stroke = Paint()
-      ..color = Colors.white
+      ..color = color
       ..style = PaintingStyle.stroke
       ..strokeWidth = 4
       ..strokeCap = StrokeCap.round;
@@ -3282,19 +4166,25 @@ class _ProgressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final visuals = context.appVisuals;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(999),
       child: SizedBox(
         height: 12,
         child: Stack(
           children: [
-            Container(color: const Color(0xFFE6E7FB)),
+            Container(
+              color: _blendColors(visuals.cardSurface, visuals.primary, 0.10),
+            ),
             FractionallySizedBox(
               alignment: Alignment.centerLeft,
               widthFactor: value.clamp(0.0, 1.0).toDouble(),
               child: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(colors: [_mint, _primaryIndigo]),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [visuals.accent, visuals.primary],
+                  ),
                 ),
               ),
             ),
@@ -3311,6 +4201,29 @@ String _formatDateTime(DateTime value) {
   final month = value.month.toString().padLeft(2, "0");
   final day = value.day.toString().padLeft(2, "0");
   return "$day/$month/${value.year} $hour:$minute";
+}
+
+Color _blendColors(Color base, Color overlay, double opacity) {
+  return Color.alphaBlend(
+    overlay.withValues(alpha: opacity.clamp(0.0, 1.0)),
+    base,
+  );
+}
+
+Color _bestContrastingColor(
+  Color background, {
+  Color light = Colors.white,
+  Color dark = const Color(0xFF101820),
+}) {
+  final lightContrast = _contrastRatio(background, light);
+  final darkContrast = _contrastRatio(background, dark);
+  return lightContrast >= darkContrast ? light : dark;
+}
+
+double _contrastRatio(Color a, Color b) {
+  final lighter = math.max(a.computeLuminance(), b.computeLuminance());
+  final darker = math.min(a.computeLuminance(), b.computeLuminance());
+  return (lighter + 0.05) / (darker + 0.05);
 }
 
 class _LocationCaptureException implements Exception {

@@ -19,6 +19,9 @@ def api_home(request):
             "routes": {
                 "admin": "/admin/",
                 "health": "/api/v1/health/",
+                "auth_register": "/api/v1/auth/register/",
+                "auth_sign_in": "/api/v1/auth/sign-in/",
+                "auth_me": "/api/v1/auth/me/",
                 "incident_categories": "/api/v1/taxonomies/incident-categories/",
                 "location_types": "/api/v1/taxonomies/location-types/",
                 "submit_report": "/api/v1/reports/",

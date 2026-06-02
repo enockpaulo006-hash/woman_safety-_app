@@ -15,3 +15,6 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+
+ BELLOW IS THE COMMAND TO RUBN THE SERVER
+.\venv\Scripts\python.exe manage.py runserver 0.0.0.0:8000 

@@ -1,0 +1,97 @@
+{% extends "admin_portal/base.html" %}
+
+{% block page_actions %}
+<span class="portal-chip portal-chip-strong">Final review step</span>
+<span class="portal-chip">Anonymous reporting</span>
+<span class="portal-chip">Consent and data handling</span>
+{% endblock %}
+
+{% block content %}
+<section class="portal-layout portal-layout-2col">
+    <article class="portal-card portal-card-highlight">
+        <p class="portal-card-label">Privacy Checklist</p>
+        <h3>Before sharing or exporting data</h3>
+        <ol class="portal-roadmap">
+            <li>Use approved reports only.</li>
+            <li>Keep personal names, phone numbers, and exact identities out of summaries.</li>
+            <li>Use area-level location details unless a response team needs precise coordinates.</li>
+            <li>Share brief outputs only with authorised partners.</li>
+            <li>Record moderation decisions so the evidence trail stays clear.</li>
+        </ol>
+    </article>
+    <article class="portal-card">
+        <p class="portal-card-label">Who Uses This Step</p>
+        <div class="portal-module-list">
+            <div class="portal-module-row">
+                <strong>TAWLA and city gender desk</strong>
+                <span>Use trends for advocacy, programme planning, and policy response.</span>
+            </div>
+            <div class="portal-module-row">
+                <strong>Moderators and researchers</strong>
+                <span>Check data quality, anonymity, and ethical handling before analysis.</span>
+            </div>
+            <div class="portal-module-row">
+                <strong>Portal administrators</strong>
+                <span>Manage roles and make sure only authorised users can see each module.</span>
+            </div>
+        </div>
+    </article>
+</section>
+
+<section class="portal-card">
+    <div class="portal-section-heading">
+        <div>
+            <p class="portal-card-label">Role Setup</p>
+            <h3>Django groups that control portal visibility</h3>
+        </div>
+    </div>
+    <div class="portal-table-wrap">
+        <table class="portal-table">
+            <thead>
+                <tr>
+                    <th>Group name</th>
+                    <th>User type</th>
+                    <th>Visible portal steps</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>portal_admin</strong></td>
+                    <td>System owner or lead administrator</td>
+                    <td>All steps</td>
+                </tr>
+                <tr>
+                    <td><strong>moderator</strong></td>
+                    <td>Moderation and data quality officer</td>
+                    <td>Dashboard, Review Reports, Privacy and Security</td>
+                </tr>
+                <tr>
+                    <td><strong>gis_analyst</strong></td>
+                    <td>GIS hotspot mapping user</td>
+                    <td>Dashboard, Map Hotspots</td>
+                </tr>
+                <tr>
+                    <td><strong>policy_officer</strong></td>
+                    <td>City council gender desk</td>
+                    <td>Dashboard, Map Hotspots, Generate Brief, Privacy and Security</td>
+                </tr>
+                <tr>
+                    <td><strong>police_partner</strong></td>
+                    <td>Tanzania Police Force response partner</td>
+                    <td>Dashboard, Map Hotspots, Generate Brief</td>
+                </tr>
+                <tr>
+                    <td><strong>tawla_partner</strong></td>
+                    <td>TAWLA advocacy and programme partner</td>
+                    <td>Dashboard, Map Hotspots, Generate Brief, Privacy and Security</td>
+                </tr>
+                <tr>
+                    <td><strong>researcher</strong></td>
+                    <td>ARU Gender and Participation researcher</td>
+                    <td>Dashboard, Map Hotspots, Generate Brief, Privacy and Security</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

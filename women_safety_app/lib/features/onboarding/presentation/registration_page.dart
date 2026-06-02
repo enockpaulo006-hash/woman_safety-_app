@@ -2,10 +2,18 @@ import 'package:flutter/material.dart';
 
 import '../../../core/settings/app_settings_scope.dart';
 import '../../../core/theme/app_palette.dart';
-import '../../reporting/presentation/report_home_page.dart';
+import '../../auth/data/models/auth_session.dart';
+import '../../auth/data/services/auth_api_service.dart';
+import '../../auth/data/services/google_auth_service.dart';
+import 'auth_shared_widgets.dart';
 
 class RegistrationPage extends StatefulWidget {
-  const RegistrationPage({super.key});
+  const RegistrationPage({
+    required this.onAuthenticated,
+    super.key,
+  });
+
+  final Future<void> Function(AuthSession) onAuthenticated;
 
   @override
   State<RegistrationPage> createState() => _RegistrationPageState();
@@ -17,9 +25,13 @@ class _RegistrationPageState extends State<RegistrationPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _api = AuthApiService();
+  final _googleAuth = GoogleAuthService();
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _isSubmitting = false;
+  String? _activeAction;
 
   @override
   void dispose() {
@@ -30,7 +42,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final strings = AppSettingsScope.readStringsOf(context);
     final form = _formKey.currentState;
     if (form == null || !form.validate()) {
@@ -38,20 +50,129 @@ class _RegistrationPageState extends State<RegistrationPage> {
     }
 
     FocusScope.of(context).unfocus();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          strings.text('registrationReady', {
-            'name': _fullNameController.text.trim(),
-          }),
-        ),
-      ),
-    );
+    setState(() {
+      _isSubmitting = true;
+      _activeAction = 'email';
+    });
 
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute<void>(builder: (_) => const ReportHomePage()),
-      (route) => false,
-    );
+    try {
+      final session = await _api.register(
+        fullName: _fullNameController.text,
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isSubmitting = false;
+        _activeAction = null;
+      });
+      widget.onAuthenticated(session);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isSubmitting = false;
+        _activeAction = null;
+      });
+
+      final message = AuthApiService.isConnectivityError(error)
+          ? strings.text('authConnectionFailed')
+          : error.toString();
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
+  Future<void> _continueWithGoogle() async {
+    final strings = AppSettingsScope.readStringsOf(context);
+    FocusScope.of(context).unfocus();
+
+    setState(() {
+      _isSubmitting = true;
+      _activeAction = 'google';
+    });
+
+    try {
+      final result = await _googleAuth.authenticate();
+      final session = await _api.signInWithGoogle(idToken: result.idToken);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isSubmitting = false;
+        _activeAction = null;
+      });
+      widget.onAuthenticated(session);
+    } on GoogleAuthCancelledException {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isSubmitting = false;
+        _activeAction = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(strings.text('googleSignInCanceled'))),
+      );
+    } on GoogleAuthNotConfiguredException {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isSubmitting = false;
+        _activeAction = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(strings.text('googleSignInNotConfigured'))),
+      );
+    } on GoogleAuthException catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isSubmitting = false;
+        _activeAction = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error.message.trim().isEmpty
+                ? strings.text('googleSignInFailed')
+                : error.message,
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isSubmitting = false;
+        _activeAction = null;
+      });
+
+      final message = AuthApiService.isConnectivityError(error)
+          ? strings.text('authConnectionFailed')
+          : error.toString();
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    }
   }
 
   @override
@@ -84,13 +205,13 @@ class _RegistrationPageState extends State<RegistrationPage> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        /*Text(
-                          'Registration happens once. After this, the app takes the user straight into reporting.',
+                        Text(
+                          strings.text('registrationHint'),
                           style: textTheme.bodyMedium?.copyWith(
                             color: const Color(0xFFFBE2EC),
                             height: 1.45,
                           ),
-                        ),*/
+                        ),
                         const SizedBox(height: 24),
                         _RegistrationField(
                           controller: _fullNameController,
@@ -188,27 +309,56 @@ class _RegistrationPageState extends State<RegistrationPage> {
                             }
                             return null;
                           },
-                          onFieldSubmitted: (_) => _submit(),
+                          onFieldSubmitted: (_) {
+                            _submit();
+                          },
                         ),
                         const SizedBox(height: 28),
                         SizedBox(
                           width: double.infinity,
                           child: FilledButton(
-                            onPressed: _submit,
-                            child: Text(strings.text('signUp')),
+                            onPressed: _isSubmitting ? null : _submit,
+                            child: _activeAction == 'email'
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : Text(strings.text('signUp')),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        AuthDivider(label: strings.text('orContinueWith')),
+                        const SizedBox(height: 20),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: _isSubmitting ? null : _continueWithGoogle,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              backgroundColor: Colors.white.withValues(alpha: 0.06),
+                              side: BorderSide(
+                                color: Colors.white.withValues(alpha: 0.35),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 15),
+                            ),
+                            icon: _activeAction == 'google'
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const GoogleBadge(),
+                            label: Text(strings.text('continueWithGoogle')),
                           ),
                         ),
                         const SizedBox(height: 18),
-                        Center(
-                         /* child: Text(
-                          'No login screen. This is a first registration flow only.',
-                            textAlign: TextAlign.center,
-                            style: textTheme.bodyMedium?.copyWith(
-                              color: const Color(0xFFFDE5EE),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),*/
-                        ),
                       ],
                     ),
                   ),

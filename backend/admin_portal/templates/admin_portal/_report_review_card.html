@@ -1,0 +1,125 @@
+<article class="portal-report-card">
+    <div class="portal-report-main">
+        <div class="portal-report-heading">
+            <div>
+                <p class="portal-card-label">Incident Report</p>
+                <h3>{{ report.public_reference }}</h3>
+            </div>
+            <span class="portal-status-pill is-{{ report.status }}">{{ report.get_status_display }}</span>
+        </div>
+
+        <div class="portal-report-grid">
+            <div>
+                <span>Category</span>
+                <strong>{{ report.category.name }}</strong>
+            </div>
+            <div>
+                <span>Location Type</span>
+                <strong>{{ report.location_type.name }}</strong>
+            </div>
+            <div>
+                <span>Area Name</span>
+                <strong>{{ report.approx_area_name|default:"Area context missing" }}</strong>
+            </div>
+            <div>
+                <span>Ward / District</span>
+                <strong>{{ report.ward_or_district|default:"Not provided" }}</strong>
+            </div>
+            <div>
+                <span>Occurred</span>
+                <strong>{{ report.occurred_at|date:"M j, Y H:i" }}</strong>
+            </div>
+            <div>
+                <span>Reported</span>
+                <strong>{{ report.reported_at|date:"M j, Y H:i" }}</strong>
+            </div>
+            <div>
+                <span>Language</span>
+                <strong>{{ report.language_code|upper }}</strong>
+            </div>
+            <div>
+                <span>Consent</span>
+                <strong>{{ report.consent_acknowledged|yesno:"Yes,No" }}</strong>
+            </div>
+            <div>
+                <span>Latitude</span>
+                <strong>{% if report.geom %}{{ report.geom.y|floatformat:6 }}{% else %}Missing{% endif %}</strong>
+            </div>
+            <div>
+                <span>Longitude</span>
+                <strong>{% if report.geom %}{{ report.geom.x|floatformat:6 }}{% else %}Missing{% endif %}</strong>
+            </div>
+            <div>
+                <span>Duplicate Of</span>
+                <strong>{{ report.duplicate_of_report.public_reference|default:"No duplicate linked" }}</strong>
+            </div>
+            <div>
+                <span>Internal ID</span>
+                <strong>{{ report.id }}</strong>
+            </div>
+        </div>
+
+        <div class="portal-report-description">
+            <span>Description</span>
+            <p>{{ report.description|default:"No description was provided." }}</p>
+        </div>
+
+        <form class="portal-review-form portal-report-action-form" method="post" action="{% url 'admin-report-status-update' report.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next_url }}">
+            <label>
+                <span>Decision</span>
+                <select name="status" aria-label="Set status for {{ report.public_reference }}">
+                    {% for status_value, status_label in status_choices %}
+                    <option value="{{ status_value }}" {% if report.status == "submitted" or report.status == "under_review" %}{% if status_value == "approved" %}selected{% endif %}{% elif report.status == status_value %}selected{% endif %}>{{ status_label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                <span>Moderation note</span>
+                <input type="text" name="moderation_note" placeholder="Reason for approval, rejection, or review">
+            </label>
+            <button type="submit">Save decision</button>
+        </form>
+    </div>
+
+    <aside class="portal-report-map-panel">
+        <p class="portal-card-label">Incident Hotspot Map</p>
+        {% if report.geom %}
+        <div class="portal-report-map-shell">
+            <div
+                class="portal-report-mini-map"
+                data-report-mini-map
+                data-reference="{{ report.public_reference }}"
+                data-category="{{ report.category.name }}"
+                data-area="{{ report.approx_area_name|default:report.ward_or_district|default:'Area context missing' }}"
+                data-lat="{{ report.geom.y|floatformat:6 }}"
+                data-lng="{{ report.geom.x|floatformat:6 }}"
+                data-time-bucket="{% if report.occurred_at.hour >= 5 and report.occurred_at.hour < 12 %}morning{% elif report.occurred_at.hour >= 12 and report.occurred_at.hour < 17 %}afternoon{% elif report.occurred_at.hour >= 17 and report.occurred_at.hour < 21 %}evening{% else %}night{% endif %}"
+            >
+                <span>Loading incident map...</span>
+            </div>
+            <button type="button" class="portal-map-maximize portal-report-map-maximize" data-report-map-maximize>
+                Maximize map
+            </button>
+        </div>
+        <div class="portal-map-action-row">
+            <a
+                class="portal-map-direction-link"
+                href="https://www.google.com/maps/search/?api=1&query={{ report.geom.y|floatformat:6 }},{{ report.geom.x|floatformat:6 }}"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                Open exact point in Google Maps
+            </a>
+        </div>
+        <small class="portal-map-note">
+            Red pin marks the incident point. The circle shows the nearby area around {{ report.approx_area_name|default:report.ward_or_district|default:"this location" }}.
+        </small>
+        {% else %}
+        <div class="portal-report-mini-map portal-report-mini-map-empty">
+            <span>No GPS point was submitted for this report.</span>
+        </div>
+        {% endif %}
+    </aside>
+</article>

@@ -1,20 +1,20 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../models/pending_incident_report.dart';
 
 class OfflineReportStore {
-  static const _fileName = "move_safety_pending_reports.json";
+  static const _storageKey = "move_safety_pending_reports";
+  static const _legacyFileName = "move_safety_pending_reports.json";
 
   Future<List<PendingIncidentReport>> loadPendingReports() async {
     try {
-      final file = await _queueFile();
-      if (!await file.exists()) {
-        return const [];
-      }
-
-      final content = await file.readAsString();
-      if (content.trim().isEmpty) {
+      final preferences = await SharedPreferences.getInstance();
+      var content = preferences.getString(_storageKey);
+      content ??= await _migrateLegacyReports(preferences);
+      if (content == null || content.trim().isEmpty) {
         return const [];
       }
 
@@ -42,19 +42,31 @@ class OfflineReportStore {
   }
 
   Future<void> savePendingReports(List<PendingIncidentReport> reports) async {
-    final file = await _queueFile();
+    final preferences = await SharedPreferences.getInstance();
     final encodedReports = jsonEncode(
       reports.map((report) => report.toJson()).toList(growable: false),
     );
-    await file.writeAsString(encodedReports, flush: true);
+    await preferences.setString(_storageKey, encodedReports);
   }
 
-  Future<File> _queueFile() async {
-    final directory = Directory.systemTemp;
-    if (!await directory.exists()) {
-      await directory.create(recursive: true);
-    }
+  Future<String?> _migrateLegacyReports(SharedPreferences preferences) async {
+    try {
+      final file = File(
+        "${Directory.systemTemp.path}${Platform.pathSeparator}$_legacyFileName",
+      );
+      if (!await file.exists()) {
+        return null;
+      }
 
-    return File("${directory.path}${Platform.pathSeparator}$_fileName");
+      final content = await file.readAsString();
+      if (content.trim().isEmpty) {
+        return null;
+      }
+
+      await preferences.setString(_storageKey, content);
+      return content;
+    } catch (_) {
+      return null;
+    }
   }
 }

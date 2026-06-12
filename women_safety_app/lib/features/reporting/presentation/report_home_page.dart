@@ -20,6 +20,7 @@ import '../data/services/reporting_seed_data.dart';
 
 enum _AppSection {
   home,
+  hotspot,
   report,
   offline,
   sos,
@@ -51,7 +52,6 @@ class _ReportHomePageState extends State<ReportHomePage>
   final _offlineStore = OfflineReportStore();
 
   final _areaController = TextEditingController();
-  final _wardController = TextEditingController();
   final _descriptionController = TextEditingController();
 
   List<IncidentCategory> _categories = const [];
@@ -94,7 +94,6 @@ class _ReportHomePageState extends State<ReportHomePage>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _areaController.dispose();
-    _wardController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
@@ -159,7 +158,6 @@ class _ReportHomePageState extends State<ReportHomePage>
 
   Future<void> _loadTaxonomies() async {
     final previousCategoryCode = _selectedCategory?.code;
-    final previousLocationTypeCode = _selectedLocationType?.code;
     var backendAvailable = false;
 
     setState(() {
@@ -185,7 +183,7 @@ class _ReportHomePageState extends State<ReportHomePage>
         _selectedCategory = _categoryForCode(categories, previousCategoryCode);
         _selectedLocationType = _locationTypeForCode(
           locationTypes,
-          previousLocationTypeCode,
+          "STREET",
         );
         _isLiveConnectionAvailable = true;
         _usingOfflineTaxonomies = false;
@@ -196,7 +194,6 @@ class _ReportHomePageState extends State<ReportHomePage>
         await _syncPendingReports(
           showSnack: false,
           onlineCategories: categories,
-          onlineLocationTypes: locationTypes,
         );
       }
     } catch (error) {
@@ -216,7 +213,7 @@ class _ReportHomePageState extends State<ReportHomePage>
         );
         _selectedLocationType = _locationTypeForCode(
           fallbackLocationTypes,
-          previousLocationTypeCode,
+          "STREET",
         );
         _isLiveConnectionAvailable = backendAvailable;
         _usingOfflineTaxonomies = true;
@@ -271,8 +268,9 @@ class _ReportHomePageState extends State<ReportHomePage>
   void _selectBottomDestination(int index) {
     final section = switch (index) {
       0 => _AppSection.home,
-      1 => _AppSection.report,
-      2 => _AppSection.offline,
+      1 => _AppSection.hotspot,
+      2 => _AppSection.report,
+      3 => _AppSection.offline,
       _ => _AppSection.sos,
     };
 
@@ -299,12 +297,14 @@ class _ReportHomePageState extends State<ReportHomePage>
       switch (section) {
         case _AppSection.home:
           _selectedBottomIndex = 0;
-        case _AppSection.report:
+        case _AppSection.hotspot:
           _selectedBottomIndex = 1;
-        case _AppSection.offline:
+        case _AppSection.report:
           _selectedBottomIndex = 2;
-        case _AppSection.sos:
+        case _AppSection.offline:
           _selectedBottomIndex = 3;
+        case _AppSection.sos:
+          _selectedBottomIndex = 4;
         case _AppSection.guide:
         case _AppSection.syncCenter:
         case _AppSection.settings:
@@ -334,9 +334,7 @@ class _ReportHomePageState extends State<ReportHomePage>
 
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      throw _LocationCaptureException(
-        strings.text('locationServiceOff'),
-      );
+      throw _LocationCaptureException(strings.text('locationServiceOff'));
     }
 
     var permission = await Geolocator.checkPermission();
@@ -345,9 +343,7 @@ class _ReportHomePageState extends State<ReportHomePage>
     }
 
     if (permission == LocationPermission.denied) {
-      throw _LocationCaptureException(
-        strings.text('locationPermissionDenied'),
-      );
+      throw _LocationCaptureException(strings.text('locationPermissionDenied'));
     }
 
     if (permission == LocationPermission.deniedForever) {
@@ -357,9 +353,7 @@ class _ReportHomePageState extends State<ReportHomePage>
     }
 
     return Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-      ),
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
     );
   }
 
@@ -461,10 +455,7 @@ class _ReportHomePageState extends State<ReportHomePage>
             : strings.text('sosCopiedWithLocation'),
       );
 
-      await _showSosReadySheet(
-        message: message,
-        hasLocation: position != null,
-      );
+      await _showSosReadySheet(message: message, hasLocation: position != null);
     } catch (_) {
       if (!mounted) {
         return;
@@ -529,12 +520,11 @@ class _ReportHomePageState extends State<ReportHomePage>
                       Expanded(
                         child: Text(
                           strings.text('sosReadyTitle'),
-                          style: Theme.of(
-                            sheetContext,
-                          ).textTheme.titleLarge?.copyWith(
-                            color: visuals.deep,
-                            fontWeight: FontWeight.w900,
-                          ),
+                          style: Theme.of(sheetContext).textTheme.titleLarge
+                              ?.copyWith(
+                                color: visuals.deep,
+                                fontWeight: FontWeight.w900,
+                              ),
                         ),
                       ),
                     ],
@@ -542,10 +532,8 @@ class _ReportHomePageState extends State<ReportHomePage>
                   const SizedBox(height: 14),
                   Text(
                     strings.text('sosReadyBody'),
-                    style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
-                      color: visuals.muted,
-                      height: 1.5,
-                    ),
+                    style: Theme.of(sheetContext).textTheme.bodyMedium
+                        ?.copyWith(color: visuals.muted, height: 1.5),
                   ),
                   const SizedBox(height: 14),
                   Container(
@@ -567,10 +555,11 @@ class _ReportHomePageState extends State<ReportHomePage>
                       hasLocation
                           ? strings.text('sosLocationAttached')
                           : strings.text('sosLocationMissing'),
-                      style: Theme.of(sheetContext).textTheme.labelLarge?.copyWith(
-                        color: visuals.deep,
-                        fontWeight: FontWeight.w800,
-                      ),
+                      style: Theme.of(sheetContext).textTheme.labelLarge
+                          ?.copyWith(
+                            color: visuals.deep,
+                            fontWeight: FontWeight.w800,
+                          ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -583,10 +572,8 @@ class _ReportHomePageState extends State<ReportHomePage>
                     ),
                     child: SelectableText(
                       message,
-                      style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
-                        color: visuals.deep,
-                        height: 1.5,
-                      ),
+                      style: Theme.of(sheetContext).textTheme.bodyMedium
+                          ?.copyWith(color: visuals.deep, height: 1.5),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -628,7 +615,7 @@ class _ReportHomePageState extends State<ReportHomePage>
       return;
     }
 
-    if (_selectedCategory == null || _selectedLocationType == null) {
+    if (_selectedCategory == null) {
       _showSnack(strings.text('taxonomyWait'));
       return;
     }
@@ -667,12 +654,11 @@ class _ReportHomePageState extends State<ReportHomePage>
 
       final result = await _api.submitReport(
         categoryId: _selectedCategory!.id,
-        locationTypeId: _selectedLocationType!.id,
         occurredAt: _selectedDateTime!,
         latitude: _capturedLatitude!,
         longitude: _capturedLongitude!,
         approxAreaName: _areaController.text,
-        wardOrDistrict: _wardController.text,
+        wardOrDistrict: "",
         description: _descriptionController.text,
         consentAcknowledged: _consentAcknowledged,
       );
@@ -720,12 +706,12 @@ class _ReportHomePageState extends State<ReportHomePage>
     final queuedReport = PendingIncidentReport(
       localId: "offline-${DateTime.now().microsecondsSinceEpoch}",
       categoryCode: _selectedCategory!.code,
-      locationTypeCode: _selectedLocationType!.code,
+      locationTypeCode: _selectedLocationType?.code ?? "STREET",
       occurredAt: _selectedDateTime!,
       latitude: _capturedLatitude!,
       longitude: _capturedLongitude!,
       approxAreaName: _areaController.text.trim(),
-      wardOrDistrict: _wardController.text.trim(),
+      wardOrDistrict: "",
       description: _descriptionController.text.trim(),
       languageCode: _settingsController.language.locale.languageCode,
       consentAcknowledged: _consentAcknowledged,
@@ -750,20 +736,19 @@ class _ReportHomePageState extends State<ReportHomePage>
   Future<void> _syncPendingReports({
     bool showSnack = true,
     List<IncidentCategory>? onlineCategories,
-    List<LocationType>? onlineLocationTypes,
   }) async {
     if (_isSyncingPendingReports) {
       return;
     }
 
     final pendingReports = await _offlineStore.loadPendingReports();
-      if (pendingReports.isEmpty) {
-        if (mounted) {
-          setState(() {
-            _pendingReports = const [];
-            _pendingReportCount = 0;
-          });
-        }
+    if (pendingReports.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _pendingReports = const [];
+          _pendingReportCount = 0;
+        });
+      }
       if (showSnack) {
         _showSnack(_strings.text('noSavedOfflineReports'));
       }
@@ -777,15 +762,9 @@ class _ReportHomePageState extends State<ReportHomePage>
     try {
       final categories =
           onlineCategories ?? await _api.fetchIncidentCategories();
-      final locationTypes =
-          onlineLocationTypes ?? await _api.fetchLocationTypes();
 
       final categoriesByCode = {
         for (final category in categories) category.code: category,
-      };
-      final locationTypesByCode = {
-        for (final locationType in locationTypes)
-          locationType.code: locationType,
       };
 
       final remainingReports = <PendingIncidentReport>[];
@@ -794,10 +773,8 @@ class _ReportHomePageState extends State<ReportHomePage>
       for (var index = 0; index < pendingReports.length; index++) {
         final pendingReport = pendingReports[index];
         final category = categoriesByCode[pendingReport.categoryCode];
-        final locationType =
-            locationTypesByCode[pendingReport.locationTypeCode];
 
-        if (category == null || locationType == null) {
+        if (category == null) {
           remainingReports.add(pendingReport);
           continue;
         }
@@ -805,7 +782,6 @@ class _ReportHomePageState extends State<ReportHomePage>
         try {
           await _api.submitReport(
             categoryId: category.id,
-            locationTypeId: locationType.id,
             occurredAt: pendingReport.occurredAt,
             latitude: pendingReport.latitude,
             longitude: pendingReport.longitude,
@@ -878,7 +854,6 @@ class _ReportHomePageState extends State<ReportHomePage>
   void _resetForm() {
     _formKey.currentState?.reset();
     _areaController.clear();
-    _wardController.clear();
     _descriptionController.clear();
     setState(() {
       _capturedLatitude = null;
@@ -886,9 +861,7 @@ class _ReportHomePageState extends State<ReportHomePage>
       _consentAcknowledged = false;
       _selectedDateTime = null;
       _selectedCategory = _categories.isNotEmpty ? _categories.first : null;
-      _selectedLocationType = _locationTypes.isNotEmpty
-          ? _locationTypes.first
-          : null;
+      _selectedLocationType = _locationTypeForCode(_locationTypes, "STREET");
     });
   }
 
@@ -929,6 +902,8 @@ class _ReportHomePageState extends State<ReportHomePage>
     switch (_currentSection) {
       case _AppSection.home:
         return _buildHomeSection();
+      case _AppSection.hotspot:
+        return _buildHotspotSection();
       case _AppSection.report:
         return _buildReportSection();
       case _AppSection.offline:
@@ -994,6 +969,140 @@ class _ReportHomePageState extends State<ReportHomePage>
     );
   }
 
+  Widget _buildHotspotSection() {
+    final visuals = context.appVisuals;
+
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _api.getHotspots(),
+      builder: (context, snapshot) {
+        final topAreas = snapshot.data?['top_areas'] as List<dynamic>? ?? [];
+        final total = snapshot.data?['total'] ?? 0;
+
+        return RefreshIndicator(
+          onRefresh: () => _api.getHotspots().then((_) => setState(() {})),
+          color: visuals.primary,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
+            children: [
+              _SectionTopBar(
+                title: 'Incident Hotspots',
+                subtitle: 'Areas with the most reported incidents',
+                onBackPressed: _goBackToPreviousSection,
+                onMenuPressed: _openDrawer,
+              ),
+              const SizedBox(height: 18),
+              if (total > 0) ...[
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: visuals.cardSurface,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: visuals.border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Total Approved Reports: $total',
+                        style: TextStyle(
+                          color: visuals.deep,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      if (topAreas.isNotEmpty) ...[
+                        Text(
+                          'Top Areas',
+                          style: TextStyle(
+                            color: visuals.deep,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        ...topAreas.map((area) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: visuals.primary,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    area['label'] ?? 'Unknown',
+                                    style: TextStyle(
+                                      color: visuals.deep.withValues(
+                                        alpha: 0.85,
+                                      ),
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  '${area['count']} reports',
+                                  style: TextStyle(
+                                    color: visuals.muted,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+              Container(
+                height: 280,
+                decoration: BoxDecoration(
+                  color: visuals.cardSurface,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: visuals.border),
+                ),
+                child: const Center(
+                  child: Text(
+                    'Map view coming soon',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+              ),
+              if (total == 0)
+                Container(
+                  margin: const EdgeInsets.only(top: 20),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: visuals.softSurface,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Center(
+                    child: Text(
+                      'No approved incidents yet. Check back later.',
+                      style: TextStyle(color: visuals.muted, fontSize: 14),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildReportSection() {
     final strings = AppSettingsScope.stringsOf(context);
     final visuals = context.appVisuals;
@@ -1036,23 +1145,17 @@ class _ReportHomePageState extends State<ReportHomePage>
             _ReportFormCard(
               formKey: _formKey,
               categories: _categories,
-              locationTypes: _locationTypes,
               selectedCategory: _selectedCategory,
-              selectedLocationType: _selectedLocationType,
               selectedDateTime: _selectedDateTime,
               consentAcknowledged: _consentAcknowledged,
               hasCapturedLocation:
                   _capturedLatitude != null && _capturedLongitude != null,
               isGettingLocation: _isGettingLocation,
               areaController: _areaController,
-              wardController: _wardController,
               descriptionController: _descriptionController,
               isSubmitting: _isSubmitting,
               onCategoryChanged: (value) {
                 setState(() => _selectedCategory = value);
-              },
-              onLocationTypeChanged: (value) {
-                setState(() => _selectedLocationType = value);
               },
               onConsentChanged: (value) {
                 setState(() => _consentAcknowledged = value ?? false);
@@ -1212,13 +1315,11 @@ class _ReportHomePageState extends State<ReportHomePage>
         const SizedBox(height: 18),
         _SettingsCard(
           language: _settingsController.language,
-          themeMode: _settingsController.themeMode,
           autoSyncEnabled: _autoSyncEnabled,
           locationHintsEnabled: _locationHintsEnabled,
           privacyTipsEnabled: _privacyTipsEnabled,
           backendUrl: _settingsController.backendUrl,
           onLanguageChanged: _settingsController.setLanguage,
-          onThemeModeChanged: _settingsController.setThemeMode,
           onAutoSyncChanged: _settingsController.setAutoSyncEnabled,
           onLocationHintsChanged: _settingsController.setLocationHintsEnabled,
           onPrivacyTipsChanged: _settingsController.setPrivacyTipsEnabled,
@@ -1360,9 +1461,7 @@ class _SectionTopBar extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 subtitle,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: visuals.muted,
                   height: 1.4,
                 ),
@@ -1380,10 +1479,7 @@ class _SectionTopBar extends StatelessWidget {
 }
 
 class _TopBarIconButton extends StatelessWidget {
-  const _TopBarIconButton({
-    required this.icon,
-    required this.onPressed,
-  });
+  const _TopBarIconButton({required this.icon, required this.onPressed});
 
   final IconData icon;
   final VoidCallback onPressed;
@@ -1449,10 +1545,7 @@ class _StatusPill extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             label,
-            style: TextStyle(
-              color: visuals.deep,
-              fontWeight: FontWeight.w800,
-            ),
+            style: TextStyle(color: visuals.deep, fontWeight: FontWeight.w800),
           ),
         ],
       ),
@@ -1715,7 +1808,11 @@ class _PendingQueueCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final strings = AppSettingsScope.stringsOf(context);
     final visuals = context.appVisuals;
-    final queueSurface = _blendColors(visuals.cardSurface, visuals.primary, 0.10);
+    final queueSurface = _blendColors(
+      visuals.cardSurface,
+      visuals.primary,
+      0.10,
+    );
 
     if (pendingReports.isEmpty) {
       return Card(
@@ -1739,17 +1836,15 @@ class _PendingQueueCard extends StatelessWidget {
               const SizedBox(height: 16),
               Text(
                 strings.text('queueEmptyTitle'),
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 8),
               Text(
                 strings.text('queueEmptyBody'),
                 textAlign: TextAlign.center,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: visuals.muted,
                   height: 1.5,
                 ),
@@ -1774,9 +1869,9 @@ class _PendingQueueCard extends StatelessWidget {
           children: [
             Text(
               strings.text('pendingQueue'),
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w900,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 12),
             ...pendingReports.map(
@@ -1876,9 +1971,9 @@ class _SyncStatusCard extends StatelessWidget {
           children: [
             Text(
               strings.text('connectionSnapshot'),
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w900,
-              )
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 14),
             _StatusRow(
@@ -1963,13 +2058,11 @@ class _StatusRow extends StatelessWidget {
 class _SettingsCard extends StatefulWidget {
   const _SettingsCard({
     required this.language,
-    required this.themeMode,
     required this.autoSyncEnabled,
     required this.locationHintsEnabled,
     required this.privacyTipsEnabled,
     required this.backendUrl,
     required this.onLanguageChanged,
-    required this.onThemeModeChanged,
     required this.onAutoSyncChanged,
     required this.onLocationHintsChanged,
     required this.onPrivacyTipsChanged,
@@ -1977,13 +2070,11 @@ class _SettingsCard extends StatefulWidget {
   });
 
   final AppLanguage language;
-  final ThemeMode themeMode;
   final bool autoSyncEnabled;
   final bool locationHintsEnabled;
   final bool privacyTipsEnabled;
   final String backendUrl;
   final ValueChanged<AppLanguage> onLanguageChanged;
-  final ValueChanged<ThemeMode> onThemeModeChanged;
   final ValueChanged<bool> onAutoSyncChanged;
   final ValueChanged<bool> onLocationHintsChanged;
   final ValueChanged<bool> onPrivacyTipsChanged;
@@ -2135,71 +2226,26 @@ class _SettingsCardState extends State<_SettingsCard> {
               },
             ),
             const SizedBox(height: 22),
-            Text(
-              strings.text('modeSetting'),
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
-            ),
-            const SizedBox(height: 12),
-            SegmentedButton<ThemeMode>(
-              segments: const [
-                ButtonSegment<ThemeMode>(
-                  value: ThemeMode.light,
-                  icon: Icon(Icons.light_mode_outlined),
-                ),
-                ButtonSegment<ThemeMode>(
-                  value: ThemeMode.dark,
-                  icon: Icon(Icons.dark_mode_outlined),
-                ),
-              ],
-              selected: {widget.themeMode},
-              showSelectedIcon: false,
-              onSelectionChanged: (selection) {
-                if (selection.isNotEmpty) {
-                  widget.onThemeModeChanged(selection.first);
-                }
-              },
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(child: Text(strings.text('lightMode'))),
-                Expanded(
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: Text(strings.text('darkMode')),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 22),
             SwitchListTile(
               value: widget.autoSyncEnabled,
               onChanged: widget.onAutoSyncChanged,
               contentPadding: EdgeInsets.zero,
               title: Text(strings.text('autoSyncTitle')),
-              subtitle: Text(
-                strings.text('autoSyncSubtitle'),
-              ),
+              subtitle: Text(strings.text('autoSyncSubtitle')),
             ),
             SwitchListTile(
               value: widget.locationHintsEnabled,
               onChanged: widget.onLocationHintsChanged,
               contentPadding: EdgeInsets.zero,
               title: Text(strings.text('locationHintsTitle')),
-              subtitle: Text(
-                strings.text('locationHintsSubtitle'),
-              ),
+              subtitle: Text(strings.text('locationHintsSubtitle')),
             ),
             SwitchListTile(
               value: widget.privacyTipsEnabled,
               onChanged: widget.onPrivacyTipsChanged,
               contentPadding: EdgeInsets.zero,
               title: Text(strings.text('privacyTipsTitle')),
-              subtitle: Text(
-                strings.text('privacyTipsSubtitle'),
-              ),
+              subtitle: Text(strings.text('privacyTipsSubtitle')),
             ),
           ],
         ),
@@ -2225,93 +2271,95 @@ class _ThemeGalleryCard extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Column(
-          children: AppThemePreset.values.map((preset) {
-            final brightness = Theme.of(context).brightness;
-            final visuals = AppPalette.visualsFor(preset, brightness);
-            final selected = preset == currentPreset;
+          children: AppThemePreset.values
+              .map((preset) {
+                final brightness = Theme.of(context).brightness;
+                final visuals = AppPalette.visualsFor(preset, brightness);
+                final selected = preset == currentPreset;
 
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 14),
-              child: InkWell(
-                onTap: () => onThemePresetChanged(preset),
-                borderRadius: BorderRadius.circular(24),
-                child: Ink(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: selected
-                        ? visuals.primary.withValues(alpha: 0.08)
-                        : visuals.cardSurface,
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: InkWell(
+                    onTap: () => onThemePresetChanged(preset),
                     borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: selected
-                          ? visuals.primary
-                          : visuals.primary.withValues(alpha: 0.16),
-                      width: selected ? 1.5 : 1,
+                    child: Ink(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? visuals.primary.withValues(alpha: 0.08)
+                            : visuals.cardSurface,
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: selected
+                              ? visuals.primary
+                              : visuals.primary.withValues(alpha: 0.16),
+                          width: selected ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 74,
+                            height: 74,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  visuals.bright,
+                                  visuals.primary,
+                                  visuals.deep,
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(22),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                _ThemeColorDot(color: visuals.accent),
+                                const SizedBox(width: 6),
+                                _ThemeColorDot(color: visuals.blush),
+                                const SizedBox(width: 6),
+                                _ThemeColorDot(color: visuals.accentGold),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  strings.themePresetName(preset),
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.w900),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  strings.themePresetDescription(preset),
+                                  style: Theme.of(context).textTheme.bodyMedium
+                                      ?.copyWith(
+                                        color: visuals.muted,
+                                        height: 1.4,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Icon(
+                            selected
+                                ? Icons.check_circle_rounded
+                                : Icons.radio_button_unchecked_rounded,
+                            color: selected ? visuals.primary : visuals.muted,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 74,
-                        height: 74,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              visuals.bright,
-                              visuals.primary,
-                              visuals.deep,
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(22),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _ThemeColorDot(color: visuals.accent),
-                            const SizedBox(width: 6),
-                            _ThemeColorDot(color: visuals.blush),
-                            const SizedBox(width: 6),
-                            _ThemeColorDot(color: visuals.accentGold),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              strings.themePresetName(preset),
-                              style: Theme.of(context).textTheme.titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w900),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              strings.themePresetDescription(preset),
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(
-                                    color: visuals.muted,
-                                    height: 1.4,
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Icon(
-                        selected
-                            ? Icons.check_circle_rounded
-                            : Icons.radio_button_unchecked_rounded,
-                        color: selected ? visuals.primary : visuals.muted,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }).toList(growable: false),
+                );
+              })
+              .toList(growable: false),
         ),
       ),
     );
@@ -2438,7 +2486,9 @@ class _SosActionCard extends StatelessWidget {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.white,
                     backgroundColor: Colors.white.withValues(alpha: 0.08),
-                    side: BorderSide(color: Colors.white.withValues(alpha: 0.24)),
+                    side: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.24),
+                    ),
                   ),
                   icon: const Icon(Icons.edit_note_rounded),
                   label: Text(strings.text('openReportForm')),
@@ -2448,7 +2498,9 @@ class _SosActionCard extends StatelessWidget {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.white,
                     backgroundColor: Colors.white.withValues(alpha: 0.08),
-                    side: BorderSide(color: Colors.white.withValues(alpha: 0.24)),
+                    side: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.24),
+                    ),
                   ),
                   icon: const Icon(Icons.shield_outlined),
                   label: Text(strings.text('drawerGuide')),
@@ -2513,7 +2565,7 @@ class _SafetyDrawer extends StatelessWidget {
                   child: const Icon(Icons.shield_outlined, color: Colors.white),
                 ),
                 const SizedBox(width: 12),
-               /* const Expanded(
+                /* const Expanded(
                   child: Text(
                     "Move Safety",
                     style: TextStyle(
@@ -2544,9 +2596,9 @@ class _SafetyDrawer extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               currentUser.email,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: visuals.muted,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: visuals.muted),
             ),
             const SizedBox(height: 24),
             _DrawerNavTile(
@@ -2635,11 +2687,7 @@ class _DrawerNavTile extends StatelessWidget {
     final visuals = context.appVisuals;
     final theme = Theme.of(context);
     final selectedBackground = danger
-        ? _blendColors(
-            visuals.cardSurface,
-            theme.colorScheme.error,
-            0.14,
-          )
+        ? _blendColors(visuals.cardSurface, theme.colorScheme.error, 0.14)
         : _blendColors(
             visuals.cardSurface,
             visuals.primary,
@@ -2731,8 +2779,15 @@ class _BottomQuickNavigation extends StatelessWidget {
     final strings = AppSettingsScope.stringsOf(context);
     final visuals = context.appVisuals;
     final items = [
-      _BottomNavEntry(icon: Icons.home_outlined, label: strings.text('drawerHome')),
-      _BottomNavEntry(icon: Icons.edit_note_rounded, label: strings.text('report')),
+      _BottomNavEntry(
+        icon: Icons.home_outlined,
+        label: strings.text('drawerHome'),
+      ),
+      _BottomNavEntry(icon: Icons.map_outlined, label: 'Hotspots'),
+      _BottomNavEntry(
+        icon: Icons.edit_note_rounded,
+        label: strings.text('report'),
+      ),
       _BottomNavEntry(
         icon: Icons.cloud_upload_outlined,
         label: strings.text('savedOffline'),
@@ -2772,13 +2827,18 @@ class _BottomQuickNavigation extends StatelessWidget {
                 0.30,
               );
               final selectedBorder = visuals.primary.withValues(alpha: 0.46);
+              final inactiveForeground = _bestContrastingColor(
+                visuals.navBackground,
+                light: Colors.white,
+                dark: visuals.deep,
+              ).withValues(alpha: 0.78);
               final foregroundColor = selected
                   ? _bestContrastingColor(
                       selectedFill,
                       light: Colors.white,
                       dark: visuals.deep,
                     )
-                  : visuals.deep.withValues(alpha: 0.76);
+                  : inactiveForeground;
               final backgroundColor = selected
                   ? selectedFill
                   : Colors.transparent;
@@ -2805,9 +2865,7 @@ class _BottomQuickNavigation extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: backgroundColor,
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: borderColor,
-                            ),
+                            border: Border.all(color: borderColor),
                           ),
                           child: Center(
                             child: Stack(
@@ -2822,7 +2880,9 @@ class _BottomQuickNavigation extends StatelessWidget {
                                 else
                                   Text(
                                     item.label,
-                                    style: Theme.of(context).textTheme.labelLarge
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelLarge
                                         ?.copyWith(
                                           color: foregroundColor,
                                           fontWeight: FontWeight.w700,
@@ -2840,7 +2900,9 @@ class _BottomQuickNavigation extends StatelessWidget {
                                       ),
                                       decoration: BoxDecoration(
                                         color: visuals.bright,
-                                        borderRadius: BorderRadius.circular(999),
+                                        borderRadius: BorderRadius.circular(
+                                          999,
+                                        ),
                                         border: Border.all(
                                           color: visuals.navBackground,
                                           width: 1.4,
@@ -2964,26 +3026,18 @@ class _HeroCard extends StatelessWidget {
     final strings = AppSettingsScope.stringsOf(context);
     final visuals = context.appVisuals;
     final isDark = theme.brightness == Brightness.dark;
-    final heroBase = _blendColors(
-      visuals.navBackground,
-      visuals.cardSurface,
-      isDark ? 0.70 : 0.48,
-    );
-    final heroMid = _blendColors(
-      visuals.cardSurface,
-      visuals.softSurface,
-      isDark ? 0.74 : 0.42,
-    );
-    final heroEnd = _blendColors(
-      visuals.cardSurface,
-      visuals.primary,
-      isDark ? 0.10 : 0.08,
-    );
-    final heroButtonColor = _blendColors(
-      visuals.cardSurface,
-      visuals.accent,
-      isDark ? 0.18 : 0.14,
-    );
+    final heroBase = isDark
+        ? _blendColors(visuals.navBackground, visuals.cardSurface, 0.70)
+        : _blendColors(visuals.navBackground, visuals.primary, 0.24);
+    final heroMid = isDark
+        ? _blendColors(visuals.cardSurface, visuals.softSurface, 0.74)
+        : _blendColors(visuals.navBackground, visuals.deep, 0.12);
+    final heroEnd = isDark
+        ? _blendColors(visuals.cardSurface, visuals.primary, 0.10)
+        : _blendColors(visuals.navBackground, visuals.accent, 0.24);
+    final heroButtonColor = isDark
+        ? _blendColors(visuals.cardSurface, visuals.accent, 0.18)
+        : _blendColors(visuals.navBackground, visuals.accent, 0.30);
     final heroAccent = _bestContrastingColor(
       heroButtonColor,
       light: Colors.white,
@@ -3044,9 +3098,15 @@ class _HeroCard extends StatelessWidget {
             Positioned.fill(
               child: CustomPaint(
                 painter: _HeroLinePainter(
-                  strokeColor: Colors.white.withValues(alpha: isDark ? 0.10 : 0.08),
-                  fillColor: Colors.white.withValues(alpha: isDark ? 0.03 : 0.025),
-                  glowColor: Colors.white.withValues(alpha: isDark ? 0.025 : 0.02),
+                  strokeColor: Colors.white.withValues(
+                    alpha: isDark ? 0.10 : 0.08,
+                  ),
+                  fillColor: Colors.white.withValues(
+                    alpha: isDark ? 0.03 : 0.025,
+                  ),
+                  glowColor: Colors.white.withValues(
+                    alpha: isDark ? 0.025 : 0.02,
+                  ),
                 ),
               ),
             ),
@@ -3063,10 +3123,14 @@ class _HeroCard extends StatelessWidget {
                           vertical: 7,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: isDark ? 0.07 : 0.08),
+                          color: Colors.white.withValues(
+                            alpha: isDark ? 0.07 : 0.08,
+                          ),
                           borderRadius: BorderRadius.circular(999),
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: isDark ? 0.10 : 0.12),
+                            color: Colors.white.withValues(
+                              alpha: isDark ? 0.10 : 0.12,
+                            ),
                           ),
                         ),
                         child: Text(
@@ -3089,9 +3153,9 @@ class _HeroCard extends StatelessWidget {
                   const SizedBox(height: 24),
                   RichText(
                     text: TextSpan(
-                        style: textTheme.headlineLarge?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
+                      style: textTheme.headlineLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
                         height: 0.96,
                       ),
                       children: [
@@ -3113,7 +3177,9 @@ class _HeroCard extends StatelessWidget {
                   Text(
                     strings.text('heroBody'),
                     style: textTheme.bodyMedium?.copyWith(
-                      color: Colors.white.withValues(alpha: isDark ? 0.74 : 0.72),
+                      color: Colors.white.withValues(
+                        alpha: isDark ? 0.74 : 0.72,
+                      ),
                       height: 1.5,
                       fontWeight: FontWeight.w500,
                     ),
@@ -3129,7 +3195,9 @@ class _HeroCard extends StatelessWidget {
                           foregroundColor: heroAccent,
                           backgroundColor: heroButtonColor,
                           side: BorderSide(
-                            color: Colors.white.withValues(alpha: isDark ? 0.12 : 0.14),
+                            color: Colors.white.withValues(
+                              alpha: isDark ? 0.12 : 0.14,
+                            ),
                           ),
                           padding: const EdgeInsets.symmetric(
                             horizontal: 22,
@@ -3267,9 +3335,7 @@ class _QuickStepsCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               strings.text('reportFlowBody'),
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: visuals.muted,
                 height: 1.45,
               ),
@@ -3381,10 +3447,7 @@ class _InfoCard extends StatelessWidget {
                 color: _blendColors(visuals.cardSurface, visuals.primary, 0.12),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(
-                Icons.support_agent_rounded,
-                color: visuals.primary,
-              ),
+              child: Icon(Icons.support_agent_rounded, color: visuals.primary),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -3488,9 +3551,7 @@ class _OfflineStatusCard extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               body,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: visuals.muted,
                 height: 1.5,
               ),
@@ -3582,9 +3643,7 @@ class _SubmissionResultCard extends StatelessWidget {
             const SizedBox(height: 14),
             Text(
               result.message,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: visuals.muted,
                 height: 1.5,
               ),
@@ -3600,19 +3659,15 @@ class _ReportFormCard extends StatelessWidget {
   const _ReportFormCard({
     required this.formKey,
     required this.categories,
-    required this.locationTypes,
     required this.selectedCategory,
-    required this.selectedLocationType,
     required this.selectedDateTime,
     required this.consentAcknowledged,
     required this.hasCapturedLocation,
     required this.isGettingLocation,
     required this.areaController,
-    required this.wardController,
     required this.descriptionController,
     required this.isSubmitting,
     required this.onCategoryChanged,
-    required this.onLocationTypeChanged,
     required this.onConsentChanged,
     required this.onUseCurrentLocation,
     required this.onPickDateTime,
@@ -3621,19 +3676,15 @@ class _ReportFormCard extends StatelessWidget {
 
   final GlobalKey<FormState> formKey;
   final List<IncidentCategory> categories;
-  final List<LocationType> locationTypes;
   final IncidentCategory? selectedCategory;
-  final LocationType? selectedLocationType;
   final DateTime? selectedDateTime;
   final bool consentAcknowledged;
   final bool hasCapturedLocation;
   final bool isGettingLocation;
   final TextEditingController areaController;
-  final TextEditingController wardController;
   final TextEditingController descriptionController;
   final bool isSubmitting;
   final ValueChanged<IncidentCategory?> onCategoryChanged;
-  final ValueChanged<LocationType?> onLocationTypeChanged;
   final ValueChanged<bool?> onConsentChanged;
   final Future<void> Function() onUseCurrentLocation;
   final Future<void> Function() onPickDateTime;
@@ -3651,10 +3702,10 @@ class _ReportFormCard extends StatelessWidget {
       hasCapturedLocation ? visuals.accent : visuals.primary,
       hasCapturedLocation ? 0.12 : 0.06,
     );
-    final locationBorderColor = (hasCapturedLocation
-            ? visuals.accent
-            : visuals.primary)
-        .withValues(alpha: 0.26);
+    final locationBorderColor =
+        (hasCapturedLocation ? visuals.accent : visuals.primary).withValues(
+          alpha: 0.26,
+        );
     final consentPanelColor = _blendColors(
       visuals.cardSurface,
       visuals.primary,
@@ -3742,30 +3793,6 @@ class _ReportFormCard extends StatelessWidget {
                 onChanged: onCategoryChanged,
               ),
               const SizedBox(height: 16),
-              DropdownButtonFormField<LocationType>(
-                key: ValueKey<String>(
-                  "location-${selectedLocationType?.code ?? 'none'}",
-                ),
-                initialValue: selectedLocationType,
-                isExpanded: true,
-                decoration: InputDecoration(
-                  labelText: strings.text('locationType'),
-                ),
-                items: locationTypes
-                    .map(
-                      (item) => DropdownMenuItem(
-                        value: item,
-                        child: Text(
-                          strings.locationTypeName(item.code, item.name),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                        ),
-                      ),
-                    )
-                    .toList(growable: false),
-                onChanged: onLocationTypeChanged,
-              ),
-              const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
@@ -3788,22 +3815,12 @@ class _ReportFormCard extends StatelessWidget {
                 validator: _requiredField(strings.text('approxAreaRequired')),
               ),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: wardController,
-                decoration: InputDecoration(
-                  labelText: strings.text('wardDistrict'),
-                  hintText: "Ilala",
-                ),
-              ),
-              const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: locationPanelColor,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: locationBorderColor,
-                  ),
+                  border: Border.all(color: locationBorderColor),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -3927,9 +3944,7 @@ class _ReportFormCard extends StatelessWidget {
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.only(top: 10),
-                        child: Text(
-                          strings.text('consentText'),
-                        ),
+                        child: Text(strings.text('consentText')),
                       ),
                     ),
                   ],
@@ -3993,16 +4008,10 @@ class _ReportFormCard extends StatelessWidget {
     if (selectedCategory != null) {
       count++;
     }
-    if (selectedLocationType != null) {
-      count++;
-    }
     if (selectedDateTime != null) {
       count++;
     }
     if (areaController.text.trim().isNotEmpty) {
-      count++;
-    }
-    if (wardController.text.trim().isNotEmpty) {
       count++;
     }
     if (hasCapturedLocation) {
@@ -4018,7 +4027,7 @@ class _ReportFormCard extends StatelessWidget {
     return count;
   }
 
-  double _completionValue() => _completedItems() / 8;
+  double _completionValue() => _completedItems() / 6;
 
   FormFieldValidator<String> _requiredField(String message) {
     return (value) {

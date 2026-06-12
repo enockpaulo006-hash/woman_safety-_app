@@ -1,10 +1,15 @@
 ﻿import 'package:flutter/foundation.dart';
 
 class ApiConfig {
-  // Default to the current computer Wi-Fi IP for real phones on the same LAN.
+  // Default to the USB-debugging route for real phones during local dev.
+  // Run: adb reverse tcp:8000 tcp:8000
   // This can be overridden at runtime from app settings.
-  static const _androidDeviceBaseUrl = "http://192.168.1.3:8000/api/v1";
-  static const _localBaseUrl = "http://192.168.1.3:8000/api/v1";
+  static const _androidDeviceBaseUrl = "http://127.0.0.1:8000/api/v1";
+  static const _localBaseUrl = "http://127.0.0.1:8000/api/v1";
+  static const _obsoleteBundledBaseUrls = {
+    "http://192.168.1.3:8000/api/v1",
+    "http://172.17.16.69:8000/api/v1",
+  };
   static String? _savedBaseUrl;
 
   static String get defaultBaseUrl {
@@ -31,6 +36,12 @@ class ApiConfig {
 
   static void setSavedBaseUrl(String? value) {
     _savedBaseUrl = normalizeBaseUrl(value, fallback: defaultBaseUrl);
+  }
+
+  static bool isObsoleteBundledBaseUrl(String value) {
+    return _obsoleteBundledBaseUrls.contains(
+      normalizeBaseUrl(value, fallback: defaultBaseUrl),
+    );
   }
 
   static String normalizeBaseUrl(String? value, {required String fallback}) {

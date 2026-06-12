@@ -23,7 +23,6 @@ class AppSettingsController extends ChangeNotifier {
   static const _backendUrlKey = "app_settings.backend_url";
 
   AppLanguage _language = AppLanguage.english;
-  ThemeMode _themeMode = ThemeMode.light;
   AppThemePreset _themePreset = AppThemePreset.roseDawn;
   bool _autoSyncEnabled = true;
   bool _locationHintsEnabled = true;
@@ -33,7 +32,7 @@ class AppSettingsController extends ChangeNotifier {
   SharedPreferences? _preferences;
 
   AppLanguage get language => _language;
-  ThemeMode get themeMode => _themeMode;
+  ThemeMode get themeMode => ThemeMode.dark;
   AppThemePreset get themePreset => _themePreset;
   bool get autoSyncEnabled => _autoSyncEnabled;
   bool get locationHintsEnabled => _locationHintsEnabled;
@@ -49,10 +48,7 @@ class AppSettingsController extends ChangeNotifier {
       preferences.getString(_languageKey),
       fallback: _language,
     );
-    _themeMode = _themeModeFromName(
-      preferences.getString(_themeModeKey),
-      fallback: _themeMode,
-    );
+    await preferences.remove(_themeModeKey);
     _themePreset = _themePresetFromName(
       preferences.getString(_themePresetKey),
       fallback: _themePreset,
@@ -62,11 +58,17 @@ class AppSettingsController extends ChangeNotifier {
         preferences.getBool(_locationHintsKey) ?? _locationHintsEnabled;
     _privacyTipsEnabled =
         preferences.getBool(_privacyTipsKey) ?? _privacyTipsEnabled;
+    final savedBackendUrl = preferences.getString(_backendUrlKey);
     try {
       _backendUrl = ApiConfig.normalizeBaseUrl(
-        preferences.getString(_backendUrlKey),
+        savedBackendUrl,
         fallback: ApiConfig.defaultBaseUrl,
       );
+      if (savedBackendUrl != null &&
+          ApiConfig.isObsoleteBundledBaseUrl(_backendUrl)) {
+        _backendUrl = ApiConfig.defaultBaseUrl;
+        await preferences.setString(_backendUrlKey, _backendUrl);
+      }
     } on FormatException {
       _backendUrl = ApiConfig.defaultBaseUrl;
     }
@@ -82,15 +84,6 @@ class AppSettingsController extends ChangeNotifier {
     _language = language;
     notifyListeners();
     _saveString(_languageKey, language.name);
-  }
-
-  void setThemeMode(ThemeMode themeMode) {
-    if (_themeMode == themeMode) {
-      return;
-    }
-    _themeMode = themeMode;
-    notifyListeners();
-    _saveString(_themeModeKey, themeMode.name);
   }
 
   void setThemePreset(AppThemePreset themePreset) {
@@ -162,17 +155,6 @@ class AppSettingsController extends ChangeNotifier {
       return fallback;
     }
     return AppLanguage.values.where((item) => item.name == value).firstOrNull ??
-        fallback;
-  }
-
-  ThemeMode _themeModeFromName(
-    String? value, {
-    required ThemeMode fallback,
-  }) {
-    if (value == null || value.isEmpty) {
-      return fallback;
-    }
-    return ThemeMode.values.where((item) => item.name == value).firstOrNull ??
         fallback;
   }
 

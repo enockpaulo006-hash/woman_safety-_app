@@ -99,13 +99,13 @@ class AppStrings {
           'Control language, display mode, reminders, and how the app behaves offline.',
       'backendServerTitle': 'Backend server',
       'backendServerSubtitle':
-          'Update this address whenever your computer joins a different Wi-Fi network.',
+          'Use USB for local development, or update this address for Wi-Fi.',
       'backendUrlLabel': 'Backend URL',
-      'backendUrlHint': 'http://172.17.16.69:8000/api/v1',
+      'backendUrlHint': 'http://127.0.0.1:8000/api/v1',
       'backendWifiHelp':
-          'On Wi-Fi, use your computer IP, for example http://172.17.16.69:8000/api/v1.',
+          'On Wi-Fi, run the backend on 0.0.0.0 and use your computer IP.',
       'backendUsbHelp':
-          'On USB, you can use http://127.0.0.1:8000/api/v1 after adb reverse.',
+          'On USB, use http://127.0.0.1:8000/api/v1 after adb reverse tcp:8000 tcp:8000.',
       'serverSettingsButton': 'Server settings',
       'saveBackendUrl': 'Save backend URL',
       'backendUrlSaved': 'Backend URL saved. Trying connection again.',
@@ -326,13 +326,13 @@ class AppStrings {
           'Dhibiti lugha, hali ya mwonekano, vikumbusho, na jinsi programu inavyofanya kazi nje ya mtandao.',
       'backendServerTitle': 'Seva ya nyuma',
       'backendServerSubtitle':
-          'Badilisha anuani hii kila kompyuta yako inapounganishwa na Wi-Fi nyingine.',
+          'Tumia USB kwa maendeleo ya ndani, au badilisha anuani kwa Wi-Fi.',
       'backendUrlLabel': 'Anuani ya backend',
-      'backendUrlHint': 'http://172.17.16.69:8000/api/v1',
+      'backendUrlHint': 'http://127.0.0.1:8000/api/v1',
       'backendWifiHelp':
-          'Ukitumia Wi-Fi, tumia IP ya kompyuta yako, kwa mfano http://172.17.16.69:8000/api/v1.',
+          'Ukitumia Wi-Fi, endesha backend kwenye 0.0.0.0 na utumie IP ya kompyuta yako.',
       'backendUsbHelp':
-          'Ukitumia USB, unaweza kutumia http://127.0.0.1:8000/api/v1 baada ya adb reverse.',
+          'Ukitumia USB, tumia http://127.0.0.1:8000/api/v1 baada ya adb reverse tcp:8000 tcp:8000.',
       'serverSettingsButton': 'Mipangilio ya seva',
       'saveBackendUrl': 'Hifadhi anuani ya backend',
       'backendUrlSaved':

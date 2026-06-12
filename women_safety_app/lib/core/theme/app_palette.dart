@@ -38,6 +38,8 @@ class AppThemeVisuals extends ThemeExtension<AppThemeVisuals> {
   final Color blobB;
   final Color blobC;
 
+  Color get border => primary.withValues(alpha: 0.16);
+
   @override
   AppThemeVisuals copyWith({
     Color? pageBackground,

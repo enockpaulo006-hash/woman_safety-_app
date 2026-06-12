@@ -8,7 +8,7 @@ import '../../../../core/config/api_config.dart';
 import '../models/auth_session.dart';
 
 class AuthApiService {
-  static const _requestTimeout = Duration(seconds: 8);
+  static const _requestTimeout = Duration(seconds: 45);
 
   AuthApiService({http.Client? client}) : _client = client ?? http.Client();
 

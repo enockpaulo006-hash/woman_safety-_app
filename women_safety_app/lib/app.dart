@@ -115,7 +115,7 @@ class _WomenSafetyAppState extends State<WomenSafetyApp> {
               GlobalCupertinoLocalizations.delegate,
             ],
             themeMode: _settingsController.themeMode,
-            theme: AppTheme.light(_settingsController.themePreset),
+            theme: AppTheme.dark(_settingsController.themePreset),
             darkTheme: AppTheme.dark(_settingsController.themePreset),
             home: _buildHome(),
           );

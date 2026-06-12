@@ -10,7 +10,7 @@ import '../models/location_type.dart';
 import '../models/report_submission_result.dart';
 
 class ReportingApiService {
-  static const _requestTimeout = Duration(seconds: 8);
+  static const _requestTimeout = Duration(seconds: 45);
 
   ReportingApiService({http.Client? client}) : _client = client ?? http.Client();
 
@@ -53,7 +53,7 @@ class ReportingApiService {
 
   Future<ReportSubmissionResult> submitReport({
     required String categoryId,
-    required String locationTypeId,
+    String? locationTypeId,
     required DateTime occurredAt,
     required double latitude,
     required double longitude,
@@ -63,24 +63,26 @@ class ReportingApiService {
     required bool consentAcknowledged,
     String languageCode = "en",
   }) async {
+    final payload = {
+      "category_id": categoryId,
+      "occurred_at": occurredAt.toUtc().toIso8601String(),
+      "description": description.trim(),
+      "latitude": latitude,
+      "longitude": longitude,
+      "approx_area_name": approxAreaName.trim(),
+      "ward_or_district": wardOrDistrict.trim(),
+      "language_code": languageCode,
+      "consent_acknowledged": consentAcknowledged,
+    };
+    if (locationTypeId != null && locationTypeId.trim().isNotEmpty) {
+      payload["location_type_id"] = locationTypeId.trim();
+    }
+
     final response = await _client
         .post(
           _uri("/reports/"),
           headers: const {"Content-Type": "application/json"},
-          body: jsonEncode(
-            {
-              "category_id": categoryId,
-              "location_type_id": locationTypeId,
-              "occurred_at": occurredAt.toUtc().toIso8601String(),
-              "description": description.trim(),
-              "latitude": latitude,
-              "longitude": longitude,
-              "approx_area_name": approxAreaName.trim(),
-              "ward_or_district": wardOrDistrict.trim(),
-              "language_code": languageCode,
-              "consent_acknowledged": consentAcknowledged,
-            },
-          ),
+          body: jsonEncode(payload),
         )
         .timeout(_requestTimeout);
 
@@ -134,6 +136,20 @@ class ReportingApiService {
       }
     }
     return "Request failed. Please try again.";
+  }
+
+  Future<Map<String, dynamic>> getHotspots() async {
+    final response = await _client
+        .get(_uri("/hotspots/"))
+        .timeout(_requestTimeout);
+    final body = _decodeResponse(response);
+    if (response.statusCode != 200) {
+      throw ReportingApiException(_extractErrorMessage(body));
+    }
+    if (body is! Map<String, dynamic>) {
+      throw const ReportingApiException("Unexpected response format.");
+    }
+    return body;
   }
 
   static bool isConnectivityError(Object error) {

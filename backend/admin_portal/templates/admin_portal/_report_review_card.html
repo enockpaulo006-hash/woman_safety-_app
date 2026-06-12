@@ -2,7 +2,7 @@
     <div class="portal-report-main">
         <div class="portal-report-heading">
             <div>
-                <p class="portal-card-label">Incident Report</p>
+                <p class="portal-card-label">Report to review</p>
                 <h3>{{ report.public_reference }}</h3>
             </div>
             <span class="portal-status-pill is-{{ report.status }}">{{ report.get_status_display }}</span>
@@ -68,7 +68,7 @@
             {% csrf_token %}
             <input type="hidden" name="next" value="{{ next_url }}">
             <label>
-                <span>Decision</span>
+                <span>Choose decision</span>
                 <select name="status" aria-label="Set status for {{ report.public_reference }}">
                     {% for status_value, status_label in status_choices %}
                     <option value="{{ status_value }}" {% if report.status == "submitted" or report.status == "under_review" %}{% if status_value == "approved" %}selected{% endif %}{% elif report.status == status_value %}selected{% endif %}>{{ status_label }}</option>
@@ -77,14 +77,14 @@
             </label>
             <label>
                 <span>Moderation note</span>
-                <input type="text" name="moderation_note" placeholder="Reason for approval, rejection, or review">
+                <input type="text" name="moderation_note" placeholder="Short note for the audit trail">
             </label>
             <button type="submit">Save decision</button>
         </form>
     </div>
 
     <aside class="portal-report-map-panel">
-        <p class="portal-card-label">Incident Hotspot Map</p>
+        <p class="portal-card-label">Submitted location</p>
         {% if report.geom %}
         <div class="portal-report-map-shell">
             <div

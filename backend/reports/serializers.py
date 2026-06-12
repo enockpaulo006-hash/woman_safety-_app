@@ -4,6 +4,7 @@ from django.contrib.gis.geos import Point
 from django.utils import timezone
 from rest_framework import serializers
 
+from .location_enrichment import resolve_location_context
 from .models import IncidentCategory, IncidentReport, LocationType
 
 
@@ -21,7 +22,7 @@ class LocationTypeSerializer(serializers.ModelSerializer):
 
 class IncidentReportCreateSerializer(serializers.Serializer):
     category_id = serializers.UUIDField()
-    location_type_id = serializers.UUIDField()
+    location_type_id = serializers.UUIDField(required=False, allow_null=True)
     occurred_at = serializers.DateTimeField()
     description = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     latitude = serializers.FloatField()
@@ -60,15 +61,37 @@ class IncidentReportCreateSerializer(serializers.Serializer):
         except IncidentCategory.DoesNotExist as exc:
             raise serializers.ValidationError({"category_id": "Invalid incident category."}) from exc
 
-        try:
-            attrs["location_type"] = LocationType.objects.get(
-                id=attrs["location_type_id"],
-                is_active=True,
-            )
-        except LocationType.DoesNotExist as exc:
-            raise serializers.ValidationError({"location_type_id": "Invalid location type."}) from exc
+        location_context = resolve_location_context(
+            attrs["latitude"],
+            attrs["longitude"],
+        )
+        attrs["resolved_ward_or_district"] = location_context.ward_or_district
+        attrs["location_type"] = self._system_location_type(
+            location_context.location_type_code,
+        )
 
         return attrs
+
+    def _system_location_type(self, code):
+        fallback_codes = (code, "STREET", "OTHER")
+        for fallback_code in fallback_codes:
+            try:
+                return LocationType.objects.get(
+                    code=fallback_code,
+                    is_active=True,
+                )
+            except LocationType.DoesNotExist:
+                continue
+
+        location_type = LocationType.objects.filter(is_active=True).order_by(
+            "sort_order",
+            "name",
+        ).first()
+        if location_type is None:
+            raise serializers.ValidationError(
+                {"location_type": "No active location type is configured."}
+            )
+        return location_type
 
     def create(self, validated_data):
         now = timezone.now()
@@ -82,7 +105,7 @@ class IncidentReportCreateSerializer(serializers.Serializer):
             description=validated_data.get("description"),
             geom=Point(validated_data["longitude"], validated_data["latitude"], srid=4326),
             approx_area_name=validated_data.get("approx_area_name"),
-            ward_or_district=validated_data.get("ward_or_district"),
+            ward_or_district=validated_data["resolved_ward_or_district"],
             language_code=validated_data.get("language_code", "en"),
             consent_acknowledged=validated_data["consent_acknowledged"],
             status=IncidentReport.Status.SUBMITTED,

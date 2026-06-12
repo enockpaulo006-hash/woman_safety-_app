@@ -12,7 +12,7 @@
 {% block page_actions %}
 <span class="portal-chip portal-chip-strong">Approved reports only</span>
 <span class="portal-chip">{{ hotspot_total }} mapped incidents</span>
-<span class="portal-chip">Category and location type slicing</span>
+<!-- <span class="portal-chip">Filter by category, place, time, or date</span> -->
 {% endblock %}
 
 {% block content %}
@@ -21,8 +21,9 @@
     <article class="portal-card">
         <div class="portal-section-heading">
             <div>
-                <p class="portal-card-label">Deliverable 2</p>
-                <h3>Live GIS hotspot mapping workspace</h3>
+                <p class="portal-card-label">Map workspace</p>
+                <h3>See where approved incidents are clustering.</h3>
+              <!--  <p class="portal-section-copy">Use the filters first, then read the map and hotspot lists together.</p> -->
             </div>
             <div class="portal-filter-pills">
                 <a class="portal-chip {% if selected_time_bucket == 'all' %}portal-chip-strong{% endif %}" href="{% url 'admin-hotspot-map' %}">All time</a>
@@ -91,7 +92,7 @@
             <article class="portal-signal-card">
                 <span>Mapped reports</span>
                 <strong>{{ hotspot_total }}</strong>
-                <p>Only approved incidents are included in the hotspot view.</p>
+                <p>Only reviewed and approved incidents appear on this map.</p>
             </article>
             <article class="portal-signal-card">
                 <span>Morning</span>

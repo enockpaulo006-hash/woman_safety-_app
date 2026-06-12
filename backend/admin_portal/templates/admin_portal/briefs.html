@@ -1,7 +1,7 @@
 {% extends "admin_portal/base.html" %}
 
 {% block page_actions %}
-<span class="portal-chip portal-chip-strong">Monthly summary builder</span>
+<span class="portal-chip portal-chip-strong">Brief builder</span>
 <span class="portal-chip">{{ total_reports }} approved reports</span>
 <button type="button" class="portal-print-button" data-print-brief>Print brief</button>
 <a class="portal-print-button" href="{{ export_url }}">Download CSV</a>
@@ -12,8 +12,9 @@
     <article class="portal-card portal-card-highlight">
         <div class="portal-section-heading">
             <div>
-                <p class="portal-card-label">Deliverable 3</p>
-                <h3>Monthly policy brief generator</h3>
+                <p class="portal-card-label">Brief setup</p>
+                <h3>Choose a month and audience.</h3>
+                <p class="portal-section-copy">The portal builds the summary from approved reports only.</p>
             </div>
         </div>
         <form class="portal-filter-row" method="get">
@@ -47,7 +48,7 @@
         </div>
     </article>
     <article class="portal-card">
-        <p class="portal-card-label">Main Statistics</p>
+        <p class="portal-card-label">Main statistics</p>
         <div class="portal-stat-strip portal-stat-strip-vertical">
             <div>
                 <span>Highest-risk area</span>
@@ -68,7 +69,6 @@
 <section class="portal-card portal-brief-document" data-brief-document>
     <div class="portal-brief-masthead">
         <div>
-            <p class="portal-card-label">Project 17 Policy Brief</p>
             <h3>Gender-sensitive safety incidents: {{ month_label }}</h3>
             <p>Prepared for city council, TAWLA, police, and NGO response partners.</p>
         </div>
@@ -162,14 +162,14 @@
         </div>
     </div>
 
-    <div class="portal-brief-section">
+   <!-- <div class="portal-brief-section">
         <p class="portal-card-label">Recommended Actions</p>
         <ol class="portal-roadmap">
             {% for recommendation in recommendations %}
-            <li>{{ recommendation }}</li>
+            <!--li>{{ recommendation }}</li--
             {% endfor %}
         </ol>
-    </div>
+    </div>-->
 
     <div class="portal-brief-section">
         <p class="portal-card-label">Approved Incident Sample</p>

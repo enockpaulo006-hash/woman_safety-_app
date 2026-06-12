@@ -10,7 +10,7 @@
 {% endblock %}
 
 {% block page_actions %}
-<span class="portal-chip portal-chip-strong">Queue review</span>
+<span class="portal-chip portal-chip-strong">Review queue</span>
 <span class="portal-chip">{{ total_reports }} total reports</span>
 <span class="portal-chip">Viewing {{ selected_report_position }} of {{ review_reports_total }}</span>
 <span class="portal-chip">{{ missing_context_count }} need area context</span>
@@ -28,49 +28,52 @@
         {% endif %}
         <div class="portal-section-heading">
             <div>
-                <p class="portal-card-label">Review Queue</p>
-                <h3>Live moderation workspace</h3>
+                <p class="portal-card-label">Review queue</p>
+                <h3>Check one report, choose a decision, then save.</h3>
             </div>
             <div class="portal-filter-pills">
-                <a class="portal-chip {% if not show_all_reports %}portal-chip-strong{% endif %}" href="{{ single_review_url }}">One by one</a>
-                <a class="portal-chip {% if show_all_reports %}portal-chip-strong{% endif %}" href="{{ review_all_url }}">Review all reports</a>
+                <a class="portal-chip {% if not show_all_reports %}portal-chip-strong{% endif %}" href="{{ single_review_url }}">Single report view</a>
+                <a class="portal-chip {% if show_all_reports %}portal-chip-strong{% endif %}" href="{{ review_all_url }}">List view</a>
                 <a class="portal-chip {% if selected_status == 'all' %}portal-chip-strong{% endif %}" href="{% url 'admin-moderation' %}">All reports</a>
                 {% for status_value, status_label in status_choices %}
                 <a class="portal-chip {% if selected_status == status_value %}portal-chip-strong{% endif %}" href="{% url 'admin-moderation' %}?status={{ status_value }}">{{ status_label }}</a>
                 {% endfor %}
             </div>
         </div>
-        <details class="portal-review-guide">
-            <summary>Review guide and quality flags</summary>
+        <section class="portal-helper-panel">
+            <div>
+                <p class="portal-card-label">What to do here</p>
+                <h4>Review safely before data is used elsewhere</h4>
+            </div>
             <div class="portal-review-guide-grid">
                 <div>
-                    <p class="portal-card-label">Moderation workflow</p>
+                    <p class="portal-card-label">Decision steps</p>
                     <ul class="portal-checklist">
-                        <li>Validate completeness and consent status.</li>
-                        <li>Mark duplicates or suspicious submissions.</li>
-                        <li>Approve, reject, archive, or move to review.</li>
-                        <li>Keep an audit trail of moderation decisions.</li>
+                        <li>Confirm the report has enough information.</li>
+                        <li>Check consent, location, and possible duplicates.</li>
+                        <li>Choose Approved, Rejected, Archived, or Under review.</li>
+                        <li>Add a short note when the decision needs explanation.</li>
                     </ul>
                 </div>
                 <div>
-                    <p class="portal-card-label">Quality flags</p>
+                    <p class="portal-card-label">Watch for</p>
                     <div class="portal-module-list">
                         <div class="portal-module-row">
                             <strong>Missing area context</strong>
-                            <span>Prompt moderator attention when locality detail is weak.</span>
+                            <span>Area, ward, or district detail is not clear enough.</span>
                         </div>
                         <div class="portal-module-row">
                             <strong>Duplicate clusters</strong>
-                            <span>Compare same time, place, and category reports.</span>
+                            <span>Same time, place, and incident category appears more than once.</span>
                         </div>
                         <div class="portal-module-row">
-                            <strong>Contradictory entries</strong>
-                            <span>Flag impossible time or location combinations.</span>
+                            <strong>Contradictory details</strong>
+                            <span>Time, location, or description does not match the rest of the report.</span>
                         </div>
                     </div>
                 </div>
             </div>
-        </details>
+        </section>
         <form class="portal-filter-row" method="get">
             <div class="portal-filter-box">
                 <label for="category-filter">Category</label>
@@ -159,7 +162,7 @@
                 <div class="portal-report-main">
                     <div class="portal-report-heading">
                         <div>
-                            <p class="portal-card-label">Incident Report</p>
+                            <p class="portal-card-label">Selected report</p>
                             <h3>{{ report.public_reference }}</h3>
                         </div>
                         <span class="portal-status-pill is-{{ report.status }}">{{ report.get_status_display }}</span>
@@ -225,7 +228,7 @@
                         {% csrf_token %}
                         <input type="hidden" name="next" value="{{ next_url }}">
                         <label>
-                            <span>Decision</span>
+                            <span>Choose decision</span>
                             <select name="status" aria-label="Set status for {{ report.public_reference }}">
                                 {% for status_value, status_label in status_choices %}
                                 <option value="{{ status_value }}" {% if report.status == status_value %}selected{% endif %}>{{ status_label }}</option>
@@ -234,14 +237,14 @@
                         </label>
                         <label>
                             <span>Moderation note</span>
-                            <input type="text" name="moderation_note" placeholder="Reason for approval, rejection, or review">
+                            <input type="text" name="moderation_note" placeholder="Short note for the audit trail">
                         </label>
                         <button type="submit">Save decision</button>
                     </form>
                 </div>
 
                 <aside class="portal-report-map-panel">
-                    <p class="portal-card-label">Incident Hotspot Map</p>
+                    <p class="portal-card-label">Submitted location</p>
                     {% if report.geom %}
                     <div class="portal-report-map-shell">
                         <div

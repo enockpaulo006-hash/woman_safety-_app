@@ -5,6 +5,7 @@ from .views import (
     IncidentCategoryListAPIView,
     IncidentReportCreateAPIView,
     LocationTypeListAPIView,
+    HotspotAPIView,
 )
 
 urlpatterns = [
@@ -27,5 +28,10 @@ urlpatterns = [
         "reports/",
         IncidentReportCreateAPIView.as_view(),
         name="incident-report-create",
+    ),
+    path(
+        "hotspots/",
+        HotspotAPIView.as_view(),
+        name="hotspot-data",
     ),
 ]

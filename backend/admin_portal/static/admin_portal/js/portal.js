@@ -13,11 +13,11 @@ if (sidebarToggleButton) {
     savedPreference = null;
   }
 
-  const defaultCollapsed = document.body.classList.contains("portal-page-moderation");
+  const defaultCollapsed = false;
   const setSidebarCollapsed = (isCollapsed) => {
     document.body.classList.toggle("is-sidebar-collapsed", isCollapsed);
     sidebarToggleButton.setAttribute("aria-expanded", String(!isCollapsed));
-    sidebarToggleButton.textContent = isCollapsed ? "Open" : "Hide menu";
+    sidebarToggleButton.textContent = isCollapsed ? "Show menu" : "Hide menu";
   };
 
   setSidebarCollapsed(

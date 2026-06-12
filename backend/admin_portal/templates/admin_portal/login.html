@@ -10,21 +10,15 @@
 <body class="portal-auth-page">
     <main class="portal-auth-shell">
        <!-- <section class="portal-auth-brand">
-           
-          <h1>Women Safety Portal</h1>
-            <p class="portal-auth-copy">
-                Sign in with a staff account. The portal will show only the steps
-                assigned to your role: moderation, hotspot analysis, monthly briefs,
-                or privacy review.
-            </p>
-            <div class="portal-chip-row">
-                <span class="portal-chip portal-chip-strong">Staff-only portal</span>
-                <span class="portal-chip">Role-based access</span>
-            </div> 
-        </section> -->
+            <p class="portal-card-label">Women Safety Portal</p>
+            <h1>Women Safety Portal</h1>
+            </div>
+        </section>-->
+
         <section class="portal-auth-card">
             <p class="portal-card-label">Women Safety Portal</p>
-            <h2>Portal Sign In</h2>
+            <h2>Sign in</h2>
+            <p class="portal-auth-copy portal-auth-copy-muted">Use your assigned staff account to continue.</p>
             <form method="post" class="portal-auth-form">
                 {% csrf_token %}
                 {% if next_url %}
@@ -63,7 +57,7 @@
                         {% endif %}
                     </div>
                 </div>
-                <button type="submit" class="portal-auth-submit">Enter Portal</button>
+                <button type="submit" class="portal-auth-submit">Enter portal</button>
             </form>
         </section>
     </main>

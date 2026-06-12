@@ -4,7 +4,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import IncidentCategory, LocationType
+from .models import IncidentCategory, LocationType, IncidentReport
 from .serializers import (
     IncidentCategorySerializer,
     IncidentReportCreateSerializer,
@@ -70,4 +70,75 @@ class IncidentReportCreateAPIView(APIView):
                 "message": "Report submitted successfully.",
             },
             status=status.HTTP_201_CREATED,
+        )
+
+
+class HotspotAPIView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        category = request.GET.get("category", "all")
+        reports = IncidentReport.objects.select_related(
+            "category", "location_type"
+        ).filter(status=IncidentReport.Status.APPROVED)
+
+        if category != "all":
+            reports = reports.filter(category_id=category)
+
+        hotspot_data = []
+        area_counts = {}
+        category_counts = {}
+        time_counts = {"morning": 0, "afternoon": 0, "evening": 0, "night": 0}
+
+        for report in reports[:500]:
+            if not report.geom:
+                continue
+            lat = float(report.geom.y)
+            lng = float(report.geom.x)
+            hour = report.occurred_at.hour
+            if 5 <= hour < 12:
+                bucket = "morning"
+            elif 12 <= hour < 17:
+                bucket = "afternoon"
+            elif 17 <= hour < 21:
+                bucket = "evening"
+            else:
+                bucket = "night"
+            time_counts[bucket] += 1
+
+            area = report.approx_area_name or report.ward_or_district or "Unknown"
+            area_counts[area] = area_counts.get(area, 0) + 1
+            category_counts[report.category.name] = (
+                category_counts.get(report.category.name, 0) + 1
+            )
+
+            hotspot_data.append(
+                {
+                    "id": str(report.id),
+                    "public_reference": report.public_reference,
+                    "category": report.category.name,
+                    "location_type": report.location_type.name,
+                    "area": area,
+                    "occurred_at": report.occurred_at.isoformat(),
+                    "latitude": lat,
+                    "longitude": lng,
+                    "time_bucket": bucket,
+                }
+            )
+
+        top_areas = sorted(area_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+        top_categories = sorted(
+            category_counts.items(), key=lambda x: x[1], reverse=True
+        )[:10]
+
+        return Response(
+            {
+                "reports": hotspot_data,
+                "total": len(hotspot_data),
+                "top_areas": [{"label": label, "count": count} for label, count in top_areas],
+                "top_categories": [
+                    {"label": label, "count": count} for label, count in top_categories
+                ],
+                "time_distribution": time_counts,
+            }
         )

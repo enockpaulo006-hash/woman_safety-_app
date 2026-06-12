@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ page_title }} | Women Safety Admin Portal</title>
+    <title>{{ page_title }} | Women Safety Portal</title>
     <link rel="stylesheet" href="{% static 'admin_portal/css/portal.css' %}">
     {% block extra_head %}{% endblock %}
 </head>
@@ -18,15 +18,15 @@
                 aria-expanded="true"
                 aria-label="Show or hide portal menu"
             >
-                Menu
+                Hide menu
             </button>
             <div class="portal-brand">
-                <span class="portal-brand-kicker">Project 17</span>
+                <span class="portal-brand-kicker"></span>
                 <h1>Women Safety Portal</h1>
-                <p>Role-based workspace for reviewing reports, mapping hotspots, and preparing policy outputs.</p>
+               <!-- <p>A clear workspace for report review, hotspot mapping, monthly briefs, and safe data sharing.</p>-->
             </div>
             <div class="portal-side-group">
-                <p class="portal-side-heading">Workflow</p>
+                <p class="portal-side-heading">tools</p>
                 <nav class="portal-nav">
                     {% for step in portal_steps %}
                     <a href="{% url step.url_name %}" class="{% if page_name == step.key %}is-active{% endif %}" title="{{ step.title }}">
@@ -40,21 +40,22 @@
                 </nav>
             </div>
             <section class="portal-side-card">
-                <p class="portal-card-label">Your Access</p>
+                <p class="portal-card-label">Signed in as</p>
+                <strong>{{ request.user.get_full_name|default:request.user.get_username }}</strong>
                 {% for role_label in portal_role_labels %}
                 <span class="portal-role-pill">{{ role_label }}</span>
                 {% empty %}
                 <span class="portal-role-pill">No portal role assigned</span>
                 {% endfor %}
             </section>
-            <section class="portal-side-card portal-side-card-accent">
-                <p class="portal-card-label">How to Use</p>
+          <!--  <section class="portal-side-card portal-side-card-accent">
+                <p class="portal-card-label">How to use this portal</p>
                 <ol class="portal-side-steps">
-                    <li>Start on the dashboard.</li>
-                    <li>Open the next visible step.</li>
-                    <li>Use Back and Next to move through your allowed work.</li>
+                    <li>Start from the dashboard.</li>
+                    <li>Open the tool that matches your work today.</li>
+                    <li>Use the page actions at the top of each tool.</li>
                 </ol>
-            </section>
+            </section>-->
         </aside>
         <main class="portal-main">
             <header class="portal-header">
@@ -82,10 +83,10 @@
                 </div>
             </header>
             {% if portal_steps %}
-            <nav class="portal-workflow-trail" aria-label="Portal workflow">
+            <nav class="portal-workflow-trail" aria-label="Portal tools">
                 {% for step in portal_steps %}
                 <a href="{% url step.url_name %}" class="{% if page_name == step.key %}is-current{% endif %}">
-                    <span>{{ forloop.counter }}</span>
+                    <span>{{ step.label }}</span>
                     {{ step.title }}
                 </a>
                 {% endfor %}
@@ -97,9 +98,9 @@
             {% block content %}{% endblock %}
             <nav class="portal-step-controls" aria-label="Step controls">
                 {% if previous_step %}
-                <a class="portal-step-button" href="{% url previous_step.url_name %}">Back: {{ previous_step.title }}</a>
+                <a class="portal-step-button" href="{% url previous_step.url_name %}">Previous: {{ previous_step.title }}</a>
                 {% else %}
-                <span class="portal-step-button is-disabled">Back</span>
+                <span class="portal-step-button is-disabled">Previous</span>
                 {% endif %}
                 {% if next_step %}
                 <a class="portal-step-button portal-step-button-next" href="{% url next_step.url_name %}">Next: {{ next_step.title }}</a>

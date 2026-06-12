@@ -1,7 +1,7 @@
 {% extends "admin_portal/base.html" %}
 
 {% block page_actions %}
-<span class="portal-chip portal-chip-strong">Final review step</span>
+<span class="portal-chip portal-chip-strong">Safe sharing</span>
 <span class="portal-chip">Anonymous reporting</span>
 <span class="portal-chip">Consent and data handling</span>
 {% endblock %}
@@ -9,8 +9,9 @@
 {% block content %}
 <section class="portal-layout portal-layout-2col">
     <article class="portal-card portal-card-highlight">
-        <p class="portal-card-label">Privacy Checklist</p>
+        <p class="portal-card-label">Privacy checklist</p>
         <h3>Before sharing or exporting data</h3>
+        <!--<p class="portal-section-copy">Use this checklist whenever a report, map, CSV, or brief leaves the portal.</p>-->
         <ol class="portal-roadmap">
             <li>Use approved reports only.</li>
             <li>Keep personal names, phone numbers, and exact identities out of summaries.</li>
@@ -20,7 +21,7 @@
         </ol>
     </article>
     <article class="portal-card">
-        <p class="portal-card-label">Who Uses This Step</p>
+        <p class="portal-card-label">Who uses this page</p>
         <div class="portal-module-list">
             <div class="portal-module-row">
                 <strong>TAWLA and city gender desk</strong>
@@ -41,8 +42,8 @@
 <section class="portal-card">
     <div class="portal-section-heading">
         <div>
-            <p class="portal-card-label">Role Setup</p>
-            <h3>Django groups that control portal visibility</h3>
+            <p class="portal-card-label">Role setup</p>
+            <h3>Groups that control what each user sees</h3>
         </div>
     </div>
     <div class="portal-table-wrap">

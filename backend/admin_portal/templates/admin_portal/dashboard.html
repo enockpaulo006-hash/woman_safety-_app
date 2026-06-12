@@ -2,25 +2,15 @@
 
 {% block page_actions %}
 <span class="portal-chip portal-chip-strong">{{ total_reports }} total reports</span>
-<span class="portal-chip">{{ approved_total }} approved for map/report</span>
+<span class="portal-chip">{{ pending_total }} waiting for review</span>
+<span class="portal-chip">{{ approved_total }} approved for map and briefs</span>
 {% endblock %}
 
 {% block content %}
-<section class="portal-hero">
+<section class="portal-hero portal-dashboard-hero">
     <div class="portal-hero-copy">
-        <p class="portal-card-label">Safety Intelligence Dashboard</p>
-        <h3>Start here, then follow your visible steps.</h3>
-        <p>
-            This dashboard shows what has been reported and which part of the
-            workflow your role can open next.
-        </p>
-        <div class="portal-chip-row">
-            {% for step in portal_steps %}
-                {% if step.key != "dashboard" %}
-                <a class="portal-chip {% if forloop.first %}portal-chip-strong{% endif %}" href="{% url step.url_name %}">{{ step.title }}</a>
-                {% endif %}
-            {% endfor %}
-        </div>
+        <p class="portal-card-label">Portal home</p>
+       
     </div>
     <div class="portal-hero-panel">
         <div class="portal-mini-metric">
@@ -34,9 +24,30 @@
     </div>
 </section>
 
+<section class="portal-task-grid" aria-label="Available portal tasks">
+    {% for step in portal_steps %}
+        {% if step.key != "dashboard" %}
+        <a class="portal-task-card" href="{% url step.url_name %}">
+            <span class="portal-task-label">{{ step.label }}</span>
+            <h3>{{ step.title }}</h3>
+            <p>{{ step.description }}</p>
+            <strong>Open {{ step.title }}</strong>
+        </a>
+        {% endif %}
+    {% endfor %}
+</section>
+
+<section class="portal-section-intro">
+    <div>
+        <p class="portal-card-label">Data at a glance</p>
+        <h3>Current report status</h3>
+    </div>
+   <!--- <p>These totals help reviewers, map users, and partners understand what is ready to use.</p> -->
+</section>
+
 <section class="portal-stat-grid">
     <article class="portal-stat-card">
-        <p class="portal-card-label">Submitted</p>
+        <p class="portal-card-label">Needs action</p>
         <h3>{{ status_counts.submitted|default:0 }}</h3>
         <strong>New reports</strong>
         <p>Reports that still need first review.</p>
@@ -48,7 +59,7 @@
         <p>Reports feeding the map and monthly statistics.</p>
     </article>
     <article class="portal-stat-card">
-        <p class="portal-card-label">Rejected / Archived</p>
+        <p class="portal-card-label">Closed</p>
         <h3>{{ rejected_total }} / {{ archived_total }}</h3>
         <strong>Excluded records</strong>
         <p>Reports not used for policy statistics.</p>

@@ -91,6 +91,17 @@ GEOS_LIBRARY_PATH = r"C:\Program Files\PostgreSQL\17\bin\libgeos_c.dll"
 
 
 
+# Keep local demo logins responsive. Django can still verify older hashes
+# because the previous default hashers remain listed after PBKDF2.
+if DEBUG:
+    PASSWORD_HASHERS = [
+        'config.hashers.FastDevPBKDF2PasswordHasher',
+        'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+        'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+        'django.contrib.auth.hashers.ScryptPasswordHasher',
+    ]
+
+
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 

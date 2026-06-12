@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Incident Hotspots</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; font-family: Arial, sans-serif; }
+        body {
+            background: #1a1d23;
+            color: #ffe3ee;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            padding: 16px 20px;
+            background: #252830;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .header h1 { font-size: 1.3rem; color: #f077a9; }
+        .header p { font-size: 0.85rem; color: #d6afc1; margin-top: 4px; }
+        .layout {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            flex: 1;
+            min-height: 0;
+        }
+        .sidebar {
+            background: #252830;
+            border-right: 1px solid rgba(255,255,255,0.1);
+            padding: 16px;
+            overflow-y: auto;
+        }
+        .stat-card {
+            background: #2d3039;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+        .stat-card h3 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #d6afc1;
+            margin-bottom: 6px;
+        }
+        .stat-card strong {
+            font-size: 1.4rem;
+            color: #f8a5c5;
+        }
+        .area-list { margin-top: 12px; }
+        .area-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .area-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: #f077a9;
+            flex-shrink: 0;
+        }
+        .area-name { flex: 1; font-size: 0.85rem; color: #ffe3ee; }
+        .area-count {
+            font-size: 0.8rem;
+            color: #d6afc1;
+            font-weight: 600;
+        }
+        .map-wrap {
+            position: relative;
+            min-height: 420px;
+        }
+        #map {
+            position: absolute;
+            inset: 0;
+            background: #2d3039;
+        }
+        .loading {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            color: #d6afc1;
+            font-weight: 600;
+            z-index: 1000;
+        }
+        .empty {
+            position: absolute;
+            inset: 0;
+            display: none;
+            place-items: center;
+            text-align: center;
+            padding: 30px;
+            color: #d6afc1;
+            z-index: 999;
+        }
+        @media (max-width: 900px) {
+            .layout { grid-template-columns: 1fr; }
+            .sidebar { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Incident Hotspot Map</h1>
+        <p>Approved incidents mapped by area and time of day</p>
+    </div>
+    <div class="layout">
+        <div class="sidebar">
+            <div class="stat-card">
+                <h3>Total Mapped</h3>
+                <strong id="total-count">0</strong>
+            </div>
+            <div class="stat-card area-list">
+                <h3>Top Areas</h3>
+                <div id="top-areas"></div>
+            </div>
+            <div class="stat-card">
+                <h3>Time Distribution</h3>
+                <div id="time-dist" style="margin-top: 6px; font-size: 0.85rem; color: #ffe3ee;"></div>
+            </div>
+        </div>
+        <div class="map-wrap">
+            <div id="map"></div>
+            <div class="loading" id="loading">Loading incidents...</div>
+            <div class="empty" id="empty">
+                <div>
+                    <strong>No approved reports to map yet</strong>
+                    <p style="margin-top: 6px;">Approve incident reports, then return here.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script>
+        const API_BASE = "./api/v1/hotspots/";
+        const mapEl = document.getElementById("map");
+        const loadingEl = document.getElementById("loading");
+        const emptyEl = document.getElementById("empty");
+        const totalEl = document.getElementById("total-count");
+        const areasEl = document.getElementById("top-areas");
+        const timeEl = document.getElementById("time-dist");
+
+        if (!window.L) {
+            mapEl.innerHTML = '<div style="padding:20px;color:#d6afc1;">Map library failed to load.</div>';
+            loadingEl.style.display = "none";
+        } else {
+            const map = L.map(mapEl, { zoomControl: true }).setView([-6.7924, 39.2083], 13);
+            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                maxZoom: 19,
+                attribution: "&copy; OpenStreetMap contributors",
+            }).addTo(map);
+            const markerLayer = L.layerGroup().addTo(map);
+
+            fetch(API_BASE)
+                .then((res) => res.json())
+                .then((data) => {
+                    loadingEl.style.display = "none";
+                    const reports = data.reports || [];
+                    totalEl.textContent = data.total ?? 0;
+
+                    if (reports.length === 0) {
+                        emptyEl.style.display = "grid";
+                        return;
+                    }
+
+                    const bounds = [];
+                    const timeColors = {
+                        morning: "#e8d5b7",
+                        afternoon: "#d4a373",
+                        evening: "#d4a373",
+                        night: "#3d2b1f",
+                    };
+
+                    reports.forEach((r) => {
+                        const color = timeColors[r.time_bucket] || "#d4a373";
+                        const icon = L.divIcon({
+                            className: "",
+                            html: `<div style="
+                                width: 14px; height: 14px;
+                                border-radius: 50%;
+                                background: ${color};
+                                border: 2px solid #fff;
+                                box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+                            "></div>`,
+                            iconSize: [14, 14],
+                            iconAnchor: [7, 7],
+                        });
+                        const marker = L.marker([r.latitude, r.longitude], { icon, title: r.public_reference })
+                            .bindPopup(`<strong>${r.public_reference}</strong><br>
+                                        <span style="color:#666">${r.category} • ${r.area}</span><br>
+                                        <small>${new Date(r.occurred_at).toLocaleString()}</small>`)
+                            .addTo(markerLayer);
+                        bounds.push([r.latitude, r.longitude]);
+                    });
+
+                    if (bounds.length > 1) {
+                        map.fitBounds(bounds, { padding: [30, 30], maxZoom: 16 });
+                    } else if (bounds.length === 1) {
+                        map.setView(bounds[0], 15);
+                        markerLayer.eachLayer((m) => m.openPopup());
+                    }
+
+                    const topAreas = data.top_areas || [];
+                    areasEl.innerHTML = topAreas.length
+                        ? topAreas.map((a) => `
+                            <div class="area-item">
+                                <div class="area-dot"></div>
+                                <span class="area-name">${a.label}</span>
+                                <span class="area-count">${a.count}</span>
+                            </div>`).join("")
+                        : '<div style="font-size:0.85rem;color:#d6afc1;">No areas yet</div>';
+
+                    const td = data.time_distribution || {};
+                    timeEl.innerHTML = `
+                        Morning: ${td.morning ?? 0} &nbsp;|&nbsp;
+                        Afternoon: ${td.afternoon ?? 0} &nbsp;|&nbsp;
+                        Evening: ${td.evening ?? 0} &nbsp;|&nbsp;
+                        Night: ${td.night ?? 0}
+                    `;
+                })
+                .catch((err) => {
+                    loadingEl.textContent = "Failed to load hotspot data.";
+                    console.error(err);
+                });
+
+            setTimeout(() => map.invalidateSize(), 100);
+        }
+    </script>
+</body>
+</html>

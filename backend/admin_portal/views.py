@@ -19,6 +19,12 @@ from .roles import PortalRole, portal_context, role_required
 from reports.models import IncidentCategory, IncidentReport, LocationType, ReportStatusHistory
 
 
+def public_hotspot_map_view(request):
+    return render(request, "admin_portal/public_hotspot_map.html", {
+        "page_title": "Incident Hotspots",
+    })
+
+
 def _time_bucket(occurred_at):
     hour = occurred_at.hour
     if 5 <= hour < 12:
@@ -191,11 +197,11 @@ def dashboard_view(request):
         "admin_portal/dashboard.html",
         {
             **portal_context(request, "dashboard"),
-            "page_title": "Portal Dashboard",
-            "page_kicker": "Start Here",
+            "page_title": "Dashboard",
+            "page_kicker": "Start here",
             "page_summary": (
-                "Follow the visible steps in order. Your role controls which "
-                "parts of the portal you can open."
+                "Use this page to choose your next task. The portal only shows "
+                "the tools that match your assigned role."
             ),
             "status_counts": status_counts,
             "total_reports": total_reports,
@@ -290,11 +296,11 @@ def moderation_view(request):
         "admin_portal/moderation.html",
         {
             **portal_context(request, "moderation"),
-            "page_title": "Incident Moderation",
-            "page_kicker": "Step 1",
+            "page_title": "Review reports",
+            "page_kicker": "Report decisions",
             "page_summary": (
-                "Review submitted reports first. Only approved reports continue "
-                "to maps and monthly briefs."
+                "Check submitted incident reports, record a clear decision, and "
+                "approve only the records that should feed maps and briefs."
             ),
             "review_reports": review_reports,
             "show_all_reports": review_mode == "all",
@@ -432,11 +438,11 @@ def hotspot_map_view(request):
         "admin_portal/hotspot_map.html",
         {
             **portal_context(request, "hotspot_map"),
-            "page_title": "GIS Hotspot Map",
-            "page_kicker": "Step 2",
+            "page_title": "Map hotspots",
+            "page_kicker": "Approved report map",
             "page_summary": (
-                "Use approved reports to understand where, when, and what kind "
-                "of incidents are clustering."
+                "Explore approved reports by location, incident type, place type, "
+                "and time period so response teams can see where attention is needed."
             ),
             "categories": IncidentCategory.objects.filter(is_active=True),
             "location_types": LocationType.objects.filter(is_active=True),
@@ -530,10 +536,10 @@ def _build_brief_context(request):
 
     return {
             **portal_context(request, "briefs"),
-            "page_title": "Monthly Briefs",
-            "page_kicker": "Step 3",
+            "page_title": "Create brief",
+            "page_kicker": "Monthly summary",
             "page_summary": (
-                "Turn approved incident data into concise monthly summaries for "
+                "Turn approved incident data into a clear monthly summary for "
                 "city council, TAWLA, police partners, and researchers."
             ),
             "selected_month": month_value,
@@ -628,11 +634,11 @@ def privacy_view(request):
         "admin_portal/privacy.html",
         {
             **portal_context(request, "privacy"),
-            "page_title": "Privacy and Security",
-            "page_kicker": "Step 4",
+            "page_title": "Check privacy",
+            "page_kicker": "Safe sharing checklist",
             "page_summary": (
-                "Use this page as the final check before data is shared, printed, "
-                "or exported outside the portal."
+                "Use this page before data is shared, printed, or exported so "
+                "anonymous reports stay protected."
             ),
         },
     )

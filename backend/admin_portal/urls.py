@@ -10,6 +10,7 @@ from .views import (
     portal_login_view,
     portal_logout_view,
     privacy_view,
+    public_hotspot_map_view,
     update_report_status_view,
 )
 
@@ -25,6 +26,7 @@ urlpatterns = [
         name="admin-report-status-update",
     ),
     path("hotspot-map/", hotspot_map_view, name="admin-hotspot-map"),
+    path("public-hotspots/", public_hotspot_map_view, name="public-hotspot-map"),
     path("briefs/", briefs_view, name="admin-briefs"),
     path("briefs/export.csv/", briefs_export_view, name="admin-briefs-export"),
     path("privacy/", privacy_view, name="admin-privacy"),

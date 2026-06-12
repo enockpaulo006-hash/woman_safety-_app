@@ -14,13 +14,13 @@ class PortalRole:
 
 
 ROLE_LABELS = {
-    PortalRole.ADMIN: "Portal administrator",
-    PortalRole.MODERATOR: "Moderation and data quality officer",
-    PortalRole.GIS_ANALYST: "GIS hotspot analyst",
-    PortalRole.POLICY_OFFICER: "City council gender desk",
-    PortalRole.POLICE_PARTNER: "Police response partner",
-    PortalRole.TAWLA_PARTNER: "TAWLA advocacy partner",
-    PortalRole.RESEARCHER: "ARU researcher",
+    PortalRole.ADMIN: "Administrator",
+    PortalRole.MODERATOR: "Report reviewer",
+    PortalRole.GIS_ANALYST: "Map analyst",
+    PortalRole.POLICY_OFFICER: "Policy officer",
+    PortalRole.POLICE_PARTNER: "Police partner",
+    PortalRole.TAWLA_PARTNER: "TAWLA partner",
+    PortalRole.RESEARCHER: "Researcher",
 }
 
 
@@ -29,23 +29,23 @@ WORKFLOW_STEPS = [
         "key": "dashboard",
         "label": "Start",
         "title": "Dashboard",
-        "description": "See what needs attention today.",
+        "description": "Choose the right task and see the latest report totals.",
         "url_name": "admin-dashboard",
         "roles": set(ROLE_LABELS),
     },
     {
         "key": "moderation",
-        "label": "Step 1",
-        "title": "Review Reports",
-        "description": "Check, approve, reject, or archive submitted reports.",
+        "label": "Review",
+        "title": "Review reports",
+        "description": "Check new reports and decide what can be used.",
         "url_name": "admin-moderation",
         "roles": {PortalRole.ADMIN, PortalRole.MODERATOR},
     },
     {
         "key": "hotspot_map",
-        "label": "Step 2",
-        "title": "Map Hotspots",
-        "description": "Explore approved incidents by place, category, and time.",
+        "label": "Map",
+        "title": "Map hotspots",
+        "description": "View approved incidents by place, category, and time.",
         "url_name": "admin-hotspot-map",
         "roles": {
             PortalRole.ADMIN,
@@ -58,9 +58,9 @@ WORKFLOW_STEPS = [
     },
     {
         "key": "briefs",
-        "label": "Step 3",
-        "title": "Generate Brief",
-        "description": "Create monthly summaries for response and advocacy.",
+        "label": "Brief",
+        "title": "Create brief",
+        "description": "Prepare monthly summaries for partners and leaders.",
         "url_name": "admin-briefs",
         "roles": {
             PortalRole.ADMIN,
@@ -72,9 +72,9 @@ WORKFLOW_STEPS = [
     },
     {
         "key": "privacy",
-        "label": "Step 4",
-        "title": "Privacy and Security",
-        "description": "Review ethics, consent, anonymisation, and data handling.",
+        "label": "Privacy",
+        "title": "Check privacy",
+        "description": "Confirm data is safe before sharing or exporting.",
         "url_name": "admin-privacy",
         "roles": {
             PortalRole.ADMIN,

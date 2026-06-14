@@ -84,13 +84,18 @@ class AuthApiService {
 
     return AuthSession.fromAuthResponse(body as Map<String, dynamic>);
   }
+  
+ dynamic _decodeResponse(http.Response response) {
+  print("URL: ${response.request?.url}");
+  print("STATUS: ${response.statusCode}");
+  print("BODY: ${response.body}");
 
-  dynamic _decodeResponse(http.Response response) {
-    if (response.body.isEmpty) {
-      return const {};
-    }
-    return jsonDecode(response.body);
+  if (response.body.isEmpty) {
+    return const {};
   }
+
+  return jsonDecode(response.body);
+}
 
   String _extractErrorMessage(dynamic body) {
     if (body is Map<String, dynamic>) {

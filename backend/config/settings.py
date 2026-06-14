@@ -88,9 +88,6 @@ DATABASES = {
     }
 }
 
-GDAL_LIBRARY_PATH = r"C:\Program Files\PostgreSQL\17\bin\libgdal-35.dll"
-GEOS_LIBRARY_PATH = r"C:\Program Files\PostgreSQL\17\bin\libgeos_c.dll"
-
 
 
 # Keep local demo logins responsive. Django can still verify older hashes

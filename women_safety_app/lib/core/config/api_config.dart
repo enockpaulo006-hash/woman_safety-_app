@@ -4,12 +4,14 @@ class ApiConfig {
   // Default to the USB-debugging route for real phones during local dev.
   // Run: adb reverse tcp:8000 tcp:8000
   // This can be overridden at runtime from app settings.
-  static const _androidDeviceBaseUrl = "https://woman-safety-app-fma3.onrender.com/api/v1";
-static const _localBaseUrl = "https://woman-safety-app-fma3.onrender.com/api/v1";
+  static const _androidDeviceBaseUrl = "http://127.0.0.1:8000/api/v1";
+  static const _localBaseUrl = "http://127.0.0.1:8000/api/v1";
+
   static const _obsoleteBundledBaseUrls = {
     "http://192.168.1.3:8000/api/v1",
     "http://172.17.16.69:8000/api/v1",
   };
+
   static String? _savedBaseUrl;
 
   static String get defaultBaseUrl {
@@ -75,4 +77,3 @@ static const _localBaseUrl = "https://woman-safety-app-fma3.onrender.com/api/v1"
     return value.replaceFirst(RegExp(r"/+$"), "");
   }
 }
-

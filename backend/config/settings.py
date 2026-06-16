@@ -1,6 +1,8 @@
 import os
-import dj_database_url
 from pathlib import Path
+
+GDAL_LIBRARY_PATH = r"C:\Program Files\PostgreSQL\17\bin\libgdal-35.dll"
+GEOS_LIBRARY_PATH = r"C:\Program Files\PostgreSQL\17\bin\libgeos_c.dll"
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -79,9 +81,14 @@ WSGI_APPLICATION = 'config.wsgi.application'
 import os
 
 DATABASES = {
-    "default": dj_database_url.parse(
-        os.environ.get("DATABASE_URL")
-    )
+    "default": {
+        "ENGINE": "django.contrib.gis.db.backends.postgis",
+        "NAME": "women_safety",
+        "USER": "postgres",
+        "PASSWORD": "12345678!@#$%^&*",
+        "HOST": "127.0.0.1",
+        "PORT": "5432",
+    }
 }
 
 

@@ -116,15 +116,7 @@ class WelcomePage extends StatelessWidget {
                     child: Text(strings.text('signIn')),
                   ),
                 ),
-                const SizedBox(height: 12),
-                TextButton.icon(
-                  onPressed: () => _showBackendServerDialog(context),
-                  icon: const Icon(Icons.router_outlined, color: Colors.white),
-                  label: Text(
-                    strings.text('serverSettingsButton'),
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                ),
+      
               ],
             ),
           ),

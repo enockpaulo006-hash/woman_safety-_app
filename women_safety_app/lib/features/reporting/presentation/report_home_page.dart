@@ -4,6 +4,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart' as latlng;
 
 import '../../../../core/localization/app_strings.dart';
 import '../../../../core/settings/app_settings_controller.dart';
@@ -17,6 +19,7 @@ import '../data/models/report_submission_result.dart';
 import '../data/services/offline_report_store.dart';
 import '../data/services/reporting_api_service.dart';
 import '../data/services/reporting_seed_data.dart';
+
 
 enum _AppSection {
   home,
@@ -1068,19 +1071,150 @@ class _ReportHomePageState extends State<ReportHomePage>
                 const SizedBox(height: 16),
               ],
               Container(
-                height: 280,
-                decoration: BoxDecoration(
-                  color: visuals.cardSurface,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: visuals.border),
+  height: 280,
+  clipBehavior: Clip.hardEdge,
+  decoration: BoxDecoration(
+    borderRadius: BorderRadius.circular(20),
+    border: Border.all(color: visuals.border),
+  ),
+  child: Builder(
+    builder: (context) {
+      final reports =
+          snapshot.data?['reports'] as List<dynamic>? ?? const [];
+final markers = reports.map((report) {
+  final lat = double.tryParse('${report['latitude']}');
+  final lng = double.tryParse('${report['longitude']}');
+
+  if (lat == null || lng == null) {
+    return null;
+  }
+
+  return Marker(
+    point: latlng.LatLng(lat, lng),
+    width: 40,
+    height: 40,
+    child: Tooltip(
+      message: '${report['area']}\n${report['category']}',
+      child: const Icon(
+        Icons.location_on,
+        color: Colors.red,
+        size: 36,
+      ),
+    ),
+  );
+}).whereType<Marker>().toList();
+      final center =
+          reports.isNotEmpty
+              ? latlng.LatLng(
+                  (reports.first['latitude'] as num).toDouble(),
+                  (reports.first['longitude'] as num).toDouble(),
+                )
+              : latlng.LatLng(-6.7924, 39.2083);
+
+      return FlutterMap(
+        options: MapOptions(
+          initialCenter: center,
+          initialZoom: 12,
+        ),
+        children: [
+          TileLayer(
+            urlTemplate:
+                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            userAgentPackageName: 'com.womensafety.app',
+          ),
+          MarkerLayer(
+            markers: markers,
+          ),
+        ],
+      );
+    },
+  ),
+),
+
+const SizedBox(height: 16),
+
+if (topAreas.isNotEmpty)
+  Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: visuals.cardSurface,
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: visuals.border),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Safety Risk Areas',
+          style: TextStyle(
+            color: visuals.deep,
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        ...topAreas.map((area) {
+          final count = area['count'] ?? 0;
+
+          Color riskColor;
+          String riskLabel;
+
+          if (count >= 10) {
+            riskColor = Colors.red;
+            riskLabel = 'High Risk';
+          } else if (count >= 5) {
+            riskColor = Colors.orange;
+            riskLabel = 'Medium Risk';
+          } else {
+            riskColor = Colors.green;
+            riskLabel = 'Low Risk';
+          }
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              color: riskColor.withOpacity(0.08),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: riskColor,
                 ),
-                child: const Center(
-                  child: Text(
-                    'Map view coming soon',
-                    style: TextStyle(color: Colors.grey),
+                const SizedBox(width: 10),
+
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        area['label'] ?? 'Unknown Area',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: visuals.deep,
+                        ),
+                      ),
+                      Text(
+                        '$riskLabel • $count reports',
+                        style: TextStyle(
+                          color: riskColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
+              ],
+            ),
+          );
+        }),
+      ],
+    ),
+  ),
+
               if (total == 0)
                 Container(
                   margin: const EdgeInsets.only(top: 20),
@@ -2133,7 +2267,6 @@ class _SettingsCardState extends State<_SettingsCard> {
   @override
   Widget build(BuildContext context) {
     final strings = AppSettingsScope.stringsOf(context);
-    final visuals = context.appVisuals;
 
     return Card(
       child: Padding(
@@ -2142,71 +2275,12 @@ class _SettingsCardState extends State<_SettingsCard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              strings.text('backendServerTitle'),
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              strings.text('backendServerSubtitle'),
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: visuals.muted,
-                height: 1.45,
-              ),
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: _backendUrlController,
-              keyboardType: TextInputType.url,
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) => _saveBackendUrl(),
-              decoration: InputDecoration(
-                labelText: strings.text('backendUrlLabel'),
-                hintText: strings.text('backendUrlHint'),
-                prefixIcon: const Icon(Icons.router_outlined),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              strings.text('backendWifiHelp'),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: visuals.muted,
-                height: 1.45,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              strings.text('backendUsbHelp'),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: visuals.muted,
-                height: 1.45,
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: _isSavingBackendUrl ? null : _saveBackendUrl,
-                icon: _isSavingBackendUrl
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.cloud_sync_outlined),
-                label: Text(strings.text('saveBackendUrl')),
-              ),
-            ),
-            const SizedBox(height: 22),
-            Text(
               strings.text('languageSetting'),
               style: Theme.of(
                 context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+              ).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
             ),
             const SizedBox(height: 12),
             SegmentedButton<AppLanguage>(

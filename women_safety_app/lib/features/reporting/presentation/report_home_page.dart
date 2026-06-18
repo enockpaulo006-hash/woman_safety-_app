@@ -89,12 +89,12 @@ class _ReportHomePageState extends State<ReportHomePage>
   bool get _locationHintsEnabled => _settingsController.locationHintsEnabled;
   bool get _privacyTipsEnabled => _settingsController.privacyTipsEnabled;
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
+ @override
+void initState() {
+  super.initState();
+  WidgetsBinding.instance.addObserver(this);
+  _initialize();
+}
 
 
   @override
@@ -1018,7 +1018,10 @@ Future<Map<String, dynamic>> _getHotspotsData() async {
         final total = snapshot.data?['total'] ?? 0;
 
         return RefreshIndicator(
-          onRefresh: () => _api.getHotspots().then((_) => setState(() {})),
+         onRefresh: () async {
+          await _getHotspotsData();
+          setState(() {});
+         },
           color: visuals.primary,
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(

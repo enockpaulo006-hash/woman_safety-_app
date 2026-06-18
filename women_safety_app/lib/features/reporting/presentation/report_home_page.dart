@@ -73,6 +73,9 @@ class _ReportHomePageState extends State<ReportHomePage>
   bool _isLiveConnectionAvailable = false;
   bool _isSyncingPendingReports = false;
   bool _isPreparingSos = false;
+
+  Map<String, dynamic>? _cachedHotspots;
+
   int _pendingReportCount = 0;
   int? _selectedBottomIndex = 0;
   _AppSection _currentSection = _AppSection.home;
@@ -90,8 +93,9 @@ class _ReportHomePageState extends State<ReportHomePage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _initialize();
   }
+
+
 
   @override
   void dispose() {
@@ -109,9 +113,41 @@ class _ReportHomePageState extends State<ReportHomePage>
   }
 
   Future<void> _initialize() async {
-    await _refreshPendingReportCount();
-    await _loadTaxonomies();
+  await _refreshPendingReportCount();
+
+  _cachedHotspots = await _offlineStore.loadHotspots();
+
+  await _loadTaxonomies();
+}
+
+Future<Map<String, dynamic>> _getHotspotsData() async {
+  try {
+    final data = await _api.getHotspots();
+
+    await _offlineStore.saveHotspots(data);
+
+    _cachedHotspots = data;
+
+    return data;
+  } catch (_) {
+    if (_cachedHotspots != null) {
+      return _cachedHotspots!;
+    }
+
+    final cached = await _offlineStore.loadHotspots();
+
+    if (cached != null) {
+      _cachedHotspots = cached;
+      return cached;
+    }
+
+    return {
+      'reports': [],
+      'top_areas': [],
+      'total': 0,
+    };
   }
+}
 
   Future<void> _refreshPendingReportCount() async {
     final pendingReports = await _offlineStore.loadPendingReports();
@@ -976,7 +1012,7 @@ class _ReportHomePageState extends State<ReportHomePage>
     final visuals = context.appVisuals;
 
     return FutureBuilder<Map<String, dynamic>>(
-      future: _api.getHotspots(),
+      future: _getHotspotsData(),
       builder: (context, snapshot) {
         final topAreas = snapshot.data?['top_areas'] as List<dynamic>? ?? [];
         final total = snapshot.data?['total'] ?? 0;

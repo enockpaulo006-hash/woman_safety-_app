@@ -1,162 +1,194 @@
 {% extends "admin_portal/base.html" %}
 
 {% block page_actions %}
-<span class="portal-chip portal-chip-strong">{{ total_reports }} total reports</span>
-<span class="portal-chip">{{ pending_total }} waiting for review</span>
-<span class="portal-chip">{{ approved_total }} approved for map and briefs</span>
+<span class="portal-chip portal-chip-strong">
+    {{ total_reports }} Reports
+</span>
+
+<span class="portal-chip">
+    {{ pending_total }} Pending
+</span>
+
+<span class="portal-chip">
+    {{ approved_total }} Approved
+</span>
 {% endblock %}
 
 {% block content %}
-<section class="portal-hero portal-dashboard-hero">
-    <div class="portal-hero-copy">
-        <p class="portal-card-label">Portal home</p>
-       
-    </div>
-    <div class="portal-hero-panel">
-        <div class="portal-mini-metric">
-            <span>Total reports</span>
-            <strong>{{ total_reports }}</strong>
-        </div>
-        <div class="portal-mini-metric">
-            <span>Approved intelligence</span>
-            <strong>{{ approved_total }}</strong>
-        </div>
-    </div>
-</section>
 
-<section class="portal-task-grid" aria-label="Available portal tasks">
-    {% for step in portal_steps %}
-        {% if step.key != "dashboard" %}
-        <a class="portal-task-card" href="{% url step.url_name %}">
-            <span class="portal-task-label">{{ step.label }}</span>
-            <h3>{{ step.title }}</h3>
-            <p>{{ step.description }}</p>
-            <strong>Open {{ step.title }}</strong>
-        </a>
-        {% endif %}
-    {% endfor %}
-</section>
+<!-- KPI SECTION -->
+<section class="portal-kpi-grid">
 
-<section class="portal-section-intro">
-    <div>
-        <p class="portal-card-label">Data at a glance</p>
-        <h3>Current report status</h3>
-    </div>
-   <!--- <p>These totals help reviewers, map users, and partners understand what is ready to use.</p> -->
-</section>
-
-<section class="portal-stat-grid">
-    <article class="portal-stat-card">
-        <p class="portal-card-label">Needs action</p>
-        <h3>{{ status_counts.submitted|default:0 }}</h3>
-        <strong>New reports</strong>
-        <p>Reports that still need first review.</p>
+    <article class="portal-kpi-card">
+        <span>Total Reports</span>
+        <h2>{{ total_reports }}</h2>
     </article>
-    <article class="portal-stat-card">
-        <p class="portal-card-label">Approved</p>
-        <h3>{{ approved_total }}</h3>
-        <strong>Ready for policy use</strong>
-        <p>Reports feeding the map and monthly statistics.</p>
+
+    <article class="portal-kpi-card">
+        <span>Pending Review</span>
+        <h2>{{ pending_total }}</h2>
     </article>
-    <article class="portal-stat-card">
-        <p class="portal-card-label">Closed</p>
-        <h3>{{ rejected_total }} / {{ archived_total }}</h3>
-        <strong>Excluded records</strong>
-        <p>Reports not used for policy statistics.</p>
+
+    <article class="portal-kpi-card">
+        <span>Approved Reports</span>
+        <h2>{{ approved_total }}</h2>
     </article>
+
+    <article class="portal-kpi-card">
+        <span>Closed Reports</span>
+        <h2>{{ rejected_total }}</h2>
+    </article>
+
 </section>
 
+<!-- HOTSPOTS + TIMELINE -->
 <section class="portal-layout portal-layout-2col">
+
     <article class="portal-card">
+
         <div class="portal-section-heading">
             <div>
-                <p class="portal-card-label">Highest-Risk Areas</p>
-                <h3>Approved incident hotspots</h3>
+                <p class="portal-card-label">HOTSPOTS</p>
+                <h3>Highest Risk Areas</h3>
             </div>
         </div>
+
         <div class="portal-bar-chart">
+
             {% for area in top_areas %}
             <div class="portal-bar-row">
+
                 <div class="portal-bar-label">
                     <strong>{{ area.label }}</strong>
                     <span>{{ area.count }} report{{ area.count|pluralize }}</span>
                 </div>
+
                 <div class="portal-bar-track">
-                    <span class="portal-bar-fill" style="width: {{ area.bar_width|default:area.count }}%"></span>
+                    <span
+                        class="portal-bar-fill"
+                        style="width: {{ area.bar_width|default:area.count }}%;">
+                    </span>
                 </div>
+
             </div>
             {% empty %}
-            <div class="portal-empty-state">Approve reports to see hotspot areas.</div>
+            <div class="portal-empty-state">
+                No hotspot data available.
+            </div>
             {% endfor %}
+
         </div>
+
     </article>
 
     <article class="portal-card">
+
         <div class="portal-section-heading">
             <div>
-                <p class="portal-card-label">Time Risk</p>
-                <h3>When approved incidents happen</h3>
+                <p class="portal-card-label">TIMELINE</p>
+                <h3>Incident Time Analysis</h3>
             </div>
         </div>
+
         <div class="portal-bar-chart">
+
             {% for time_item in time_chart %}
             <div class="portal-bar-row">
+
                 <div class="portal-bar-label">
                     <strong>{{ time_item.label }}</strong>
-                    <span>{{ time_item.count }} report{{ time_item.count|pluralize }} - {{ time_item.percent }}%</span>
+                    <span>{{ time_item.percent }}%</span>
                 </div>
+
                 <div class="portal-bar-track">
-                    <span class="portal-bar-fill portal-bar-fill-alt" style="width: {{ time_item.bar_width }}%"></span>
+                    <span
+                        class="portal-bar-fill portal-bar-fill-alt"
+                        style="width: {{ time_item.bar_width }}%;">
+                    </span>
                 </div>
+
             </div>
             {% endfor %}
+
         </div>
+
     </article>
+
 </section>
 
+<!-- CATEGORIES + RECENT REPORTS -->
 <section class="portal-layout portal-layout-2col">
+
     <article class="portal-card">
+
         <div class="portal-section-heading">
             <div>
-                <p class="portal-card-label">Incident Categories</p>
-                <h3>Most reported approved incident types</h3>
+                <p class="portal-card-label">CATEGORIES</p>
+                <h3>Most Reported Incidents</h3>
             </div>
         </div>
+
         <div class="portal-module-list">
+
             {% for category in top_categories %}
             <div class="portal-module-row">
                 <strong>{{ category.label }}</strong>
-                <span>{{ category.count }} approved report{{ category.count|pluralize }}</span>
+                <span>
+                    {{ category.count }} approved report{{ category.count|pluralize }}
+                </span>
             </div>
             {% empty %}
             <div class="portal-module-row">
-                <strong>No categories yet</strong>
-                <span>Approve reports to populate category statistics.</span>
+                <strong>No category data</strong>
+                <span>Approve reports to populate statistics.</span>
             </div>
             {% endfor %}
+
         </div>
+
     </article>
 
     <article class="portal-card">
+
         <div class="portal-section-heading">
             <div>
-                <p class="portal-card-label">Recent Reports</p>
-                <h3>Latest incoming records</h3>
+                <p class="portal-card-label">RECENT REPORTS</p>
+                <h3>Latest Submissions</h3>
             </div>
         </div>
-        <div class="portal-module-list">
-            {% for report in recent_reports %}
-            <div class="portal-module-row">
-                <strong>{{ report.public_reference }} - {{ report.get_status_display }}</strong>
-                <span>{{ report.category.name }} at {{ report.approx_area_name|default:report.ward_or_district|default:"area missing" }} on {{ report.reported_at|date:"M j, Y H:i" }}</span>
-            </div>
-            {% empty %}
-            <div class="portal-module-row">
-                <strong>No reports yet</strong>
-                <span>Submitted mobile reports will appear here.</span>
-            </div>
-            {% endfor %}
-        </div>
+
+        <table class="portal-table">
+
+            <thead>
+                <tr>
+                    <th>Reference</th>
+                    <th>Category</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for report in recent_reports %}
+                <tr>
+                    <td>{{ report.public_reference }}</td>
+                    <td>{{ report.category.name }}</td>
+                    <td>{{ report.get_status_display }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3">
+                        No reports available.
+                    </td>
+                </tr>
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
     </article>
+
 </section>
+
 {% endblock %}

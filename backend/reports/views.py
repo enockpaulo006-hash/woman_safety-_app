@@ -106,7 +106,11 @@ class HotspotAPIView(APIView):
                 bucket = "night"
             time_counts[bucket] += 1
 
-            area = report.approx_area_name or report.ward_or_district or "Unknown"
+            area = (
+         (report.approx_area_name or report.ward_or_district or "Unknown")
+         .strip()
+         .title()
+          )
             area_counts[area] = area_counts.get(area, 0) + 1
             category_counts[report.category.name] = (
                 category_counts.get(report.category.name, 0) + 1
@@ -125,7 +129,7 @@ class HotspotAPIView(APIView):
                     "time_bucket": bucket,
                 }
             )
-
+        print(area_counts)
         top_areas = sorted(area_counts.items(), key=lambda x: x[1], reverse=True)[:10]
         top_categories = sorted(
             category_counts.items(), key=lambda x: x[1], reverse=True

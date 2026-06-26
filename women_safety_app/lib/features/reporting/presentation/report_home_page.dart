@@ -1012,7 +1012,9 @@ Future<Map<String, dynamic>> _getHotspotsData() async {
     final visuals = context.appVisuals;
 
     return FutureBuilder<Map<String, dynamic>>(
-      future: _getHotspotsData(),
+      future: _cachedHotspots != null
+    ? Future.value(_cachedHotspots)
+    : _getHotspotsData(),
       builder: (context, snapshot) {
         final topAreas = snapshot.data?['top_areas'] as List<dynamic>? ?? [];
         final total = snapshot.data?['total'] ?? 0;
@@ -1110,12 +1112,13 @@ Future<Map<String, dynamic>> _getHotspotsData() async {
                 const SizedBox(height: 16),
               ],
               Container(
-  height: 280,
-  clipBehavior: Clip.hardEdge,
-  decoration: BoxDecoration(
-    borderRadius: BorderRadius.circular(20),
-    border: Border.all(color: visuals.border),
-  ),
+               height: 280,
+                clipBehavior: Clip.hardEdge,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: visuals.border),
+                  ),
   child: Builder(
     builder: (context) {
       final reports =
@@ -1151,16 +1154,19 @@ final markers = reports.map((report) {
               : latlng.LatLng(-6.7924, 39.2083);
 
       return FlutterMap(
+        mapController: MapController(),
         options: MapOptions(
           initialCenter: center,
-          initialZoom: 12,
+         initialZoom: 13.5,
+          minZoom: 10,
+          maxZoom: 18,
         ),
         children: [
-          TileLayer(
-            urlTemplate:
-                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-            userAgentPackageName: 'com.womensafety.app',
-          ),
+       TileLayer(
+  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  userAgentPackageName: 'com.womensafety.app',
+  maxZoom: 19,
+),
           MarkerLayer(
             markers: markers,
           ),

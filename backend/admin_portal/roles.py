@@ -161,4 +161,8 @@ def portal_context(request, page_name):
         "next_step": next_step,
         "portal_roles": roles,
         "portal_role_labels": [ROLE_LABELS[role] for role in sorted(roles)],
+        "key": "settings",
+         "title": "Settings",
+         "url_name": "admin-settings",
+
     }

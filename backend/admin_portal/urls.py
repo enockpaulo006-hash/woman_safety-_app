@@ -1,6 +1,8 @@
 from django.shortcuts import redirect
 from django.urls import path
 
+from backend.reports import views
+
 from .views import (
     briefs_export_view,
     briefs_view,
@@ -33,3 +35,8 @@ urlpatterns = [
     path("brief/", lambda request: redirect("admin-briefs"), name="admin-brief"),
     path("berief/", lambda request: redirect("admin-briefs"), name="admin-brief-typo"),
 ]
+path(
+    "settings/",
+    views.settings_view,
+    name="admin-settings",
+),

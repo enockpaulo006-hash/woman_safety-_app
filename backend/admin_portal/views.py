@@ -638,3 +638,13 @@ def privacy_view(request):
             "page_summary": None,
         },
     )
+def settings_view(request):
+    return render(
+        request,
+        "admin_portal/settings.html",
+        {
+            **portal_context(request, "settings"),
+            "page_title": "Settings",
+            "page_summary": "",
+        },
+    )

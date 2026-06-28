@@ -55,20 +55,23 @@
                 <div class="portal-step-icon">
 
                     {% if step.key == "dashboard" %}
-                    <i class="bi bi-speedometer2"></i>
+                    <i class="bi bi-grid-1x2-fill"></i>
 
                     {% elif step.key == "moderation" %}
-                      <i class="bi bi-clipboard-check"></i>
+                      <i class="bi bi-clipboard2-check-fill"></i>
 
                     {% elif step.key == "hotspots" %}
-                         <i class="bi bi-geo-alt-fill"></i>
+                        <i class="bi bi-pin-map-fill"></i>
 
                     {% elif step.key == "briefs" %}
-                         <i class="bi bi-file-earmark-text"></i>
+                       <i class="bi bi-file-earmark-richtext-fill"></i>
 
                     {% elif step.key == "privacy" %}
-                        <i class="bi bi-shield-lock"></i>
+                       <i class="bi bi-shield-lock-fill"></i>
 
+                    {% elif step.key == "settings" %}
+                         <i class="bi bi-gear-fill"></i>
+                         
                     {% else %}
                       <i class="bi bi-circle-fill"></i>
                     {% endif %}

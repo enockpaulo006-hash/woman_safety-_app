@@ -1,14 +1,32 @@
 {% extends "admin_portal/base.html" %}
 
 {% block page_actions %}
-<span class="portal-chip portal-chip-strong">Brief builder</span>
-<span class="portal-chip">{{ total_reports }} approved reports</span>
-<button type="button" class="portal-print-button" data-print-brief>Print brief</button>
-<a class="portal-print-button" href="{{ export_url }}">Download CSV</a>
+<button type="button" class="portal-print-button" data-print-brief>
+    Print Brief
+</button>
+
+<a class="portal-print-button" href="{{ export_url }}">
+    Download CSV
+</a>
 {% endblock %}
 
 {% block content %}
+<section class="portal-header">
+    <div>
+        <span class="portal-eyebrow">
+            INCIDENT BRIEF
+        </span>
+        <h1>
+            Create Brief
+        </h1>
+        <p>
+            Generate analytical reports from approved incident data for decision makers, city authorities and partner organizations.
+        </p>
+    </div>
+</section>
+
 <section class="portal-layout portal-layout-2col">
+
     <article class="portal-card portal-card-highlight">
         <div class="portal-section-heading">
             <div>
@@ -48,22 +66,43 @@
         </div>
     </article>
     <article class="portal-card">
-        <p class="portal-card-label">Main statistics</p>
-        <div class="portal-stat-strip portal-stat-strip-vertical">
-            <div>
-                <span>Highest-risk area</span>
-                <strong>{% if area_chart %}{{ area_chart.0.label }}{% else %}None{% endif %}</strong>
-            </div>
-            <div>
-                <span>Most common incident</span>
-                <strong>{% if category_chart %}{{ category_chart.0.label }}{% else %}None{% endif %}</strong>
-            </div>
-            <div>
-                <span>Most affected place type</span>
-                <strong>{% if location_type_chart %}{{ location_type_chart.0.label }}{% else %}None{% endif %}</strong>
-            </div>
-        </div>
-    </article>
+    <p class="portal-card-label">
+        Quick Statistics
+    </p>
+    <div class="portal-summary-grid">
+        <article class="portal-summary-card">
+            <span>Highest Risk Area</span>
+            <h2>
+                {% if area_chart %}
+                    {{ area_chart.0.label }}
+                {% else %}
+                    —
+                {% endif %}
+            </h2>
+        </article>
+        <article class="portal-summary-card">
+            <span>Top Category</span>
+            <h2>
+                {% if category_chart %}
+                    {{ category_chart.0.label }}
+                {% else %}
+                    —
+                {% endif %}
+            </h2>
+        </article>
+        <article class="portal-summary-card">
+            <span>Place Type</span>
+            <h2>
+                {% if location_type_chart %}
+                    {{ location_type_chart.0.label }}
+                {% else %}
+                    —
+                {% endif %}
+            </h2>
+        </article>
+    </div>
+
+</article>
 </section>
 
 <section class="portal-card portal-brief-document" data-brief-document>
@@ -78,13 +117,32 @@
         </div>
     </div>
 
-    <div class="portal-brief-section">
-        <p class="portal-card-label">Executive Summary</p>
-        <p class="portal-brief-summary">{{ summary_text }}</p>
+<div class="portal-brief-section">
+    <div class="portal-section-heading">
+        <div>
+            <p class="portal-card-label">
+                Executive Summary
+            </p>
+            <h3>
+                Incident Overview
+            </h3>
+        </div>
     </div>
-
-    <div class="portal-brief-section">
-        <p class="portal-card-label">Area Crime Statistics</p>
+    <p class="portal-brief-summary">
+        {{ summary_text }}
+    </p>
+</div>
+<div class="portal-brief-section">
+    <div class="portal-section-heading">
+        <div>
+            <p class="portal-card-label">
+                Hotspot Analysis
+            </p>
+            <h3>
+                Areas with the Highest Incident Reports
+            </h3>
+        </div>
+    </div>
         <h4>Areas with the most reported incidents</h4>
         <div class="portal-bar-chart">
             {% for area in area_chart %}
@@ -143,8 +201,12 @@
     </div>
 
     <div class="portal-brief-section">
-        <p class="portal-card-label">Public Space Pattern</p>
-        <h4>Which type of place needs more security attention</h4>
+        <div class="portal-section-heading">
+            <div>
+                <p class="portal-card-label">Public Space Pattern</p>
+                <h3>Which type of place needs more security attention</h3>
+            </div>
+        </div>
         <div class="portal-bar-chart">
             {% for location_type in location_type_chart %}
             <div class="portal-bar-row">
@@ -171,11 +233,20 @@
         </ol>
     </div>-->
 
-    <div class="portal-brief-section">
-        <p class="portal-card-label">Approved Incident Sample</p>
+<div class="portal-brief-section">
+    <div class="portal-section-heading">
+        <div>
+            <p class="portal-card-label">
+                Incident Records
+            </p>
+            <h3>
+                Approved Incident Sample
+            </h3>
+        </div>
+    </div>
         <div class="portal-table-wrap portal-brief-table-wrap">
             <table class="portal-table">
-                <thead>
+                <thead class="portal-table-head">
                     <tr>
                         <th>Reference</th>
                         <th>Category</th>

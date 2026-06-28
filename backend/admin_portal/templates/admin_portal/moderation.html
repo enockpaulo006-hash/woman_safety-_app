@@ -1,304 +1,240 @@
 {% extends "admin_portal/base.html" %}
+{% load static %}
 
-{% block extra_head %}
+{% block extra_css %}
+
+<link rel="stylesheet" href="{% static 'admin_portal/css/portal.css' %}">
+
 <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIINfQF2wzzF6sllgCf6xEe9fVLv3YH3z2w="
-    crossorigin=""
->
+/>
+
 {% endblock %}
 
-{% block page_actions %}
-<span class="portal-chip portal-chip-strong">Review queue</span>
-<span class="portal-chip">{{ total_reports }} total reports</span>
-<span class="portal-chip">Viewing {{ selected_report_position }} of {{ review_reports_total }}</span>
-<span class="portal-chip">{{ missing_context_count }} need area context</span>
-{% endblock %}
 
 {% block content %}
-<section class="portal-layout portal-review-workspace">
-    <article class="portal-card">
-        {% if messages %}
-        <div class="portal-message-stack">
-            {% for message in messages %}
-            <div class="portal-message portal-message-{{ message.tags }}">{{ message }}</div>
-            {% endfor %}
-        </div>
-        {% endif %}
-        <div class="portal-section-heading">
-            <div>
-                <p class="portal-card-label">Review queue</p>
-                <h3>Check one report, choose a decision, then save.</h3>
-            </div>
-            <div class="portal-filter-pills">
-                <a class="portal-chip {% if not show_all_reports %}portal-chip-strong{% endif %}" href="{{ single_review_url }}">Single report view</a>
-                <a class="portal-chip {% if show_all_reports %}portal-chip-strong{% endif %}" href="{{ review_all_url }}">List view</a>
-                <a class="portal-chip {% if selected_status == 'all' %}portal-chip-strong{% endif %}" href="{% url 'admin-moderation' %}">All reports</a>
-                {% for status_value, status_label in status_choices %}
-                <a class="portal-chip {% if selected_status == status_value %}portal-chip-strong{% endif %}" href="{% url 'admin-moderation' %}?status={{ status_value }}">{{ status_label }}</a>
+
+<div class="portal-page">
+
+
+    <!-- ===================================================== -->
+    <!-- SUMMARY -->
+    <!-- ===================================================== -->
+
+    <section class="portal-summary-grid">
+
+        <article class="portal-summary-card">
+
+            <span>Total Reports</span>
+
+            <h2>{{ total_reports }}</h2>
+
+        </article>
+
+
+        <article class="portal-summary-card">
+
+            <span>Submitted</span>
+
+            <h2>{{ status_counts.submitted|default:0 }}</h2>
+
+        </article>
+
+
+        <article class="portal-summary-card">
+
+            <span>Under Review</span>
+
+            <h2>{{ status_counts.under_review|default:0 }}</h2>
+
+        </article>
+
+
+        <article class="portal-summary-card">
+
+            <span>Approved</span>
+
+            <h2>{{ status_counts.approved|default:0 }}</h2>
+
+        </article>
+
+    </section>
+<!-- ===================================================== -->
+<!-- FILTERS -->
+<!-- ===================================================== -->
+
+<section class="portal-card">
+
+    <form method="get" class="portal-filter-row">
+
+        <div class="portal-filter-group">
+            <label>Category</label>
+            <select name="category">
+                <option value="all">All Categories</option>
+
+                {% for category in categories %}
+                <option value="{{ category.id }}"
+                    {% if selected_category == category.id|stringformat:"s" %}selected{% endif %}>
+                    {{ category.name }}
+                </option>
                 {% endfor %}
-            </div>
+
+            </select>
         </div>
-        <section class="portal-helper-panel">
-            <div>
-                <p class="portal-card-label">What to do here</p>
-                <h4>Review safely before data is used elsewhere</h4>
-            </div>
-            <div class="portal-review-guide-grid">
-                <div>
-                    <p class="portal-card-label">Decision steps</p>
-                    <ul class="portal-checklist">
-                        <li>Confirm the report has enough information.</li>
-                        <li>Check consent, location, and possible duplicates.</li>
-                        <li>Choose Approved, Rejected, Archived, or Under review.</li>
-                        <li>Add a short note when the decision needs explanation.</li>
-                    </ul>
-                </div>
-                <div>
-                    <p class="portal-card-label">Watch for</p>
-                    <div class="portal-module-list">
-                        <div class="portal-module-row">
-                            <strong>Missing area context</strong>
-                            <span>Area, ward, or district detail is not clear enough.</span>
-                        </div>
-                        <div class="portal-module-row">
-                            <strong>Duplicate clusters</strong>
-                            <span>Same time, place, and incident category appears more than once.</span>
-                        </div>
-                        <div class="portal-module-row">
-                            <strong>Contradictory details</strong>
-                            <span>Time, location, or description does not match the rest of the report.</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-        <form class="portal-filter-row" method="get">
-            <div class="portal-filter-box">
-                <label for="category-filter">Category</label>
-                <select id="category-filter" name="category">
-                    <option value="all">All categories</option>
-                    {% for category in categories %}
-                    <option value="{{ category.id }}" {% if selected_category == category.id|stringformat:"s" %}selected{% endif %}>{{ category.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="portal-filter-box">
-                <label for="location-filter">Location Type</label>
-                <select id="location-filter" name="location_type">
-                    <option value="all">All locations</option>
-                    {% for location_type in location_types %}
-                    <option value="{{ location_type.id }}" {% if selected_location_type == location_type.id|stringformat:"s" %}selected{% endif %}>{{ location_type.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="portal-filter-box">
-                <label for="status-filter">Status</label>
-                <select id="status-filter" name="status">
-                    <option value="all">All statuses</option>
-                    {% for status_value, status_label in status_choices %}
-                    <option value="{{ status_value }}" {% if selected_status == status_value %}selected{% endif %}>{{ status_label }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="portal-filter-box">
-                <label for="quality-filter">Data Quality</label>
-                <select id="quality-filter" name="quality">
-                    <option value="all" {% if quality_filter == "all" %}selected{% endif %}>All reports</option>
-                    <option value="needs_context" {% if quality_filter == "needs_context" %}selected{% endif %}>Needs area context</option>
-                </select>
-            </div>
-            <button class="portal-filter-submit" type="submit">Apply filters</button>
-        </form>
-        <div class="portal-stat-strip">
-            <div>
-                <span>Total</span>
-                <strong>{{ total_reports }}</strong>
-            </div>
-            <div>
-                <span>Submitted</span>
-                <strong>{{ status_counts.submitted|default:0 }}</strong>
-            </div>
-            <div>
-                <span>Under review</span>
-                <strong>{{ status_counts.under_review|default:0 }}</strong>
-            </div>
-            <div>
-                <span>Approved</span>
-                <strong>{{ status_counts.approved|default:0 }}</strong>
-            </div>
+
+        <div class="portal-filter-group">
+            <label>Location</label>
+            <select name="location_type">
+                <option value="all">All Locations</option>
+
+                {% for location_type in location_types %}
+                <option value="{{ location_type.id }}"
+                    {% if selected_location_type == location_type.id|stringformat:"s" %}selected{% endif %}>
+                    {{ location_type.name }}
+                </option>
+                {% endfor %}
+
+            </select>
         </div>
-        <div class="portal-review-list">
-            {% if show_all_reports %}
-            <div class="portal-report-pager">
-                <strong>Showing {{ review_reports_total }} reports one after another</strong>
-                <a class="portal-step-button portal-step-button-next" href="{{ single_review_url }}">Return to one-by-one review</a>
-            </div>
-            {% for report in review_reports %}
-            {% include "admin_portal/_report_review_card.html" %}
-            {% empty %}
-            <div class="portal-empty-state portal-review-empty">
-                No incident reports match these filters yet.
-            </div>
-            {% endfor %}
-            {% else %}
-            {% if selected_report %}
-            <div class="portal-report-pager">
-                {% if previous_report_url %}
-                <a class="portal-step-button" href="{{ previous_report_url }}">Previous report</a>
-                {% else %}
-                <span class="portal-step-button is-disabled">Previous report</span>
-                {% endif %}
-                <strong>Report {{ selected_report_position }} of {{ review_reports_total }}</strong>
-                {% if next_report_url %}
-                <a class="portal-step-button portal-step-button-next" href="{{ next_report_url }}">Next report</a>
-                {% else %}
-                <span class="portal-step-button is-disabled">Next report</span>
-                {% endif %}
-            </div>
-            {% with report=selected_report %}
-            <article class="portal-report-card">
-                <div class="portal-report-main">
-                    <div class="portal-report-heading">
-                        <div>
-                            <p class="portal-card-label">Selected report</p>
-                            <h3>{{ report.public_reference }}</h3>
-                        </div>
-                        <span class="portal-status-pill is-{{ report.status }}">{{ report.get_status_display }}</span>
-                    </div>
 
-                    <div class="portal-report-grid">
-                        <div>
-                            <span>Category</span>
-                            <strong>{{ report.category.name }}</strong>
-                        </div>
-                        <div>
-                            <span>Location Type</span>
-                            <strong>{{ report.location_type.name }}</strong>
-                        </div>
-                        <div>
-                            <span>Area Name</span>
-                            <strong>{{ report.approx_area_name|default:"Area context missing" }}</strong>
-                        </div>
-                        <div>
-                            <span>Ward / District</span>
-                            <strong>{{ report.ward_or_district|default:"Not provided" }}</strong>
-                        </div>
-                        <div>
-                            <span>Occurred</span>
-                            <strong>{{ report.occurred_at|date:"M j, Y H:i" }}</strong>
-                        </div>
-                        <div>
-                            <span>Reported</span>
-                            <strong>{{ report.reported_at|date:"M j, Y H:i" }}</strong>
-                        </div>
-                        <div>
-                            <span>Language</span>
-                            <strong>{{ report.language_code|upper }}</strong>
-                        </div>
-                        <div>
-                            <span>Consent</span>
-                            <strong>{{ report.consent_acknowledged|yesno:"Yes,No" }}</strong>
-                        </div>
-                        <div>
-                            <span>Latitude</span>
-                            <strong>{% if report.geom %}{{ report.geom.y|floatformat:6 }}{% else %}Missing{% endif %}</strong>
-                        </div>
-                        <div>
-                            <span>Longitude</span>
-                            <strong>{% if report.geom %}{{ report.geom.x|floatformat:6 }}{% else %}Missing{% endif %}</strong>
-                        </div>
-                        <div>
-                            <span>Duplicate Of</span>
-                            <strong>{{ report.duplicate_of_report.public_reference|default:"No duplicate linked" }}</strong>
-                        </div>
-                        <div>
-                            <span>Internal ID</span>
-                            <strong>{{ report.id }}</strong>
-                        </div>
-                    </div>
+        <div class="portal-filter-group">
+            <label>Status</label>
+            <select name="status">
+               <option value="all">All Status</option>
 
-                    <div class="portal-report-description">
-                        <span>Description</span>
-                        <p>{{ report.description|default:"No description was provided." }}</p>
-                    </div>
+                {% for status_value,status_label in status_choices %}
+                <option value="{{ status_value }}"
+                    {% if selected_status == status_value %}selected{% endif %}>
+                    {{ status_label }}
+                </option>
+                {% endfor %}
 
-                    <form class="portal-review-form portal-report-action-form" method="post" action="{% url 'admin-report-status-update' report.id %}">
-                        {% csrf_token %}
-                        <input type="hidden" name="next" value="{{ next_url }}">
-                        <label>
-                            <span>Choose decision</span>
-                            <select name="status" aria-label="Set status for {{ report.public_reference }}">
-                                {% for status_value, status_label in status_choices %}
-                                <option value="{{ status_value }}" {% if report.status == status_value %}selected{% endif %}>{{ status_label }}</option>
-                                {% endfor %}
-                            </select>
-                        </label>
-                        <label>
-                            <span>Moderation note</span>
-                            <input type="text" name="moderation_note" placeholder="Short note for the audit trail">
-                        </label>
-                        <button type="submit">Save decision</button>
-                    </form>
-                </div>
-
-                <aside class="portal-report-map-panel">
-                    <p class="portal-card-label">Submitted location</p>
-                    {% if report.geom %}
-                    <div class="portal-report-map-shell">
-                        <div
-                            class="portal-report-mini-map"
-                            data-report-mini-map
-                            data-reference="{{ report.public_reference }}"
-                            data-category="{{ report.category.name }}"
-                            data-area="{{ report.approx_area_name|default:report.ward_or_district|default:'Area context missing' }}"
-                            data-lat="{{ report.geom.y|floatformat:6 }}"
-                            data-lng="{{ report.geom.x|floatformat:6 }}"
-                            data-time-bucket="{% if report.occurred_at.hour >= 5 and report.occurred_at.hour < 12 %}morning{% elif report.occurred_at.hour >= 12 and report.occurred_at.hour < 17 %}afternoon{% elif report.occurred_at.hour >= 17 and report.occurred_at.hour < 21 %}evening{% else %}night{% endif %}"
-                        >
-                            <span>Loading incident map...</span>
-                        </div>
-                        <button type="button" class="portal-map-maximize portal-report-map-maximize" data-report-map-maximize>
-                            Maximize map
-                        </button>
-                    </div>
-                    <div class="portal-map-action-row">
-                        <a
-                            class="portal-map-direction-link"
-                            href="https://www.google.com/maps/search/?api=1&query={{ report.geom.y|floatformat:6 }},{{ report.geom.x|floatformat:6 }}"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                        >
-                            Open exact point in Google Maps
-                        </a>
-                    </div>
-                    <small class="portal-map-note">
-                        Red pin marks the incident point. The circle shows the nearby area around {{ report.approx_area_name|default:report.ward_or_district|default:"this location" }}.
-                    </small>
-                    {% else %}
-                    <div class="portal-report-mini-map portal-report-mini-map-empty">
-                        <span>No GPS point was submitted for this report.</span>
-                    </div>
-                    {% endif %}
-                </aside>
-            </article>
-            {% endwith %}
-            {% else %}
-            <div class="portal-empty-state portal-review-empty">
-                No incident reports match these filters yet.
-            </div>
-            {% endif %}
-            {% endif %}
+            </select>
         </div>
-    </article>
+
+        <div class="portal-filter-button">
+            <button type="submit" class="portal-btn-primary">
+                Apply Filters
+            </button>
+        </div>
+
+    </form>
+
 </section>
-{% endblock %}
+
+<!-- ===================================================== -->
+<!-- REVIEW CONTENT -->
+<!-- ===================================================== -->
+
+<section class="portal-card">
+
+    {% if messages %}
+
+    <div class="portal-message-stack">
+
+        {% for message in messages %}
+
+        <div class="portal-message portal-message-{{ message.tags }}">
+            {{ message }}
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+    {% endif %}
+
+
+    {% if show_all_reports %}
+
+        <div class="portal-report-list">
+
+            {% for report in review_reports %}
+
+                {% include "admin_portal/_report_review_card.html" with report=report %}
+
+            {% empty %}
+
+                <div class="portal-empty-state">
+
+                    <h3>No reports found</h3>
+
+                    <p>
+                        No reports match the selected filters.
+                    </p>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% else %}
+
+        {% if selected_report %}
+
+<div class="portal-review-navigation">
+
+    <div class="portal-review-progress">
+        Report
+        <strong>{{ selected_report_position }}</strong>
+        of
+        <strong>{{ review_reports_total }}</strong>
+    </div>
+
+    <div class="portal-review-actions">
+
+        {% if previous_report_url %}
+        <a class="portal-nav-link" href="{{ previous_report_url }}">
+            Previous
+        </a>
+        {% endif %}
+
+        {% if next_report_url %}
+        <a class="portal-nav-link portal-nav-primary"
+           href="{{ next_report_url }}">
+            Next
+        </a>
+        {% endif %}
+
+    </div>
+
+</div>
+
+
+        {% include "admin_portal/_report_review_card.html" with report=selected_report %}
+
+        {% else %}
+
+        <div class="portal-empty-state">
+
+            <h3>No report available</h3>
+
+            <p>
+
+                There are currently no reports waiting for moderation.
+
+            </p>
+
+        </div>
+
+        {% endif %}
+
+    {% endif %}
+
+</section>
+    {% endblock %}
+
 
 {% block extra_scripts %}
+
 <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
     crossorigin=""
 ></script>
+
+<script src="{% static 'admin_portal/js/portal.js' %}"></script>
+
 {% endblock %}

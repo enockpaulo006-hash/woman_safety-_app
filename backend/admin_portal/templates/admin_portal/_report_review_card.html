@@ -33,30 +33,37 @@
                 <span>Reported</span>
                 <strong>{{ report.reported_at|date:"M j, Y H:i" }}</strong>
             </div>
-            <div>
-                <span>Language</span>
-                <strong>{{ report.language_code|upper }}</strong>
-            </div>
-            <div>
-                <span>Consent</span>
-                <strong>{{ report.consent_acknowledged|yesno:"Yes,No" }}</strong>
-            </div>
-            <div>
-                <span>Latitude</span>
-                <strong>{% if report.geom %}{{ report.geom.y|floatformat:6 }}{% else %}Missing{% endif %}</strong>
-            </div>
-            <div>
-                <span>Longitude</span>
-                <strong>{% if report.geom %}{{ report.geom.x|floatformat:6 }}{% else %}Missing{% endif %}</strong>
-            </div>
-            <div>
-                <span>Duplicate Of</span>
-                <strong>{{ report.duplicate_of_report.public_reference|default:"No duplicate linked" }}</strong>
-            </div>
-            <div>
-                <span>Internal ID</span>
-                <strong>{{ report.id }}</strong>
-            </div>
+            {% if show_full_details %}
+<div>
+    <span>Language</span>
+    <strong>{{ report.language_code|upper }}</strong>
+</div>
+
+<div>
+    <span>Consent</span>
+    <strong>{{ report.consent_acknowledged|yesno:"Yes,No" }}</strong>
+</div>
+
+<div>
+    <span>Latitude</span>
+    <strong>{% if report.geom %}{{ report.geom.y|floatformat:6 }}{% else %}Missing{% endif %}</strong>
+</div>
+
+<div>
+    <span>Longitude</span>
+    <strong>{% if report.geom %}{{ report.geom.x|floatformat:6 }}{% else %}Missing{% endif %}</strong>
+</div>
+
+<div>
+    <span>Duplicate Of</span>
+    <strong>{{ report.duplicate_of_report.public_reference|default:"No duplicate linked" }}</strong>
+</div>
+
+<div>
+    <span>Internal ID</span>
+    <strong>{{ report.id }}</strong>
+</div>
+{% endif %}
         </div>
 
         <div class="portal-report-description">

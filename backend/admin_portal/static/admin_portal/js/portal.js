@@ -94,15 +94,16 @@ if (hotspotDataNode && hotspotMapNode) {
         title: `${report.reference} - ${report.area}`,
       }).addTo(markerLayer);
 
-      marker.bindPopup(
-        `<div class="portal-map-popup">` +
-          `<strong>${escapeHtml(report.reference)}</strong>` +
-          `<span>${escapeHtml(report.category)}</span>` +
-          `<span>${escapeHtml(report.location_type)} - ${escapeHtml(report.area)}</span>` +
-          `<span>${escapeHtml(report.occurred_at)}</span>` +
-          `<small>${Number(report.latitude).toFixed(5)}, ${Number(report.longitude).toFixed(5)}</small>` +
-          `</div>`,
-      );
+     marker.bindPopup(
+       `<div class="portal-map-popup">` +
+      `<strong>${escapeHtml(report.reference)}</strong>` +
+        `<span>${escapeHtml(report.category)}</span>` +
+       `<span>${escapeHtml(report.location_type)} - ${escapeHtml(report.area)}</span>` +
+       `<span>${escapeHtml(report.occurred_at)}</span>` +
+       `<small>${Number(report.latitude).toFixed(5)}, ${Number(report.longitude).toFixed(5)}</small>` +
+       `<a class="portal-map-popup-link" href="https://www.google.com/maps/search/?api=1&query=${report.latitude},${report.longitude}" target="_blank" rel="noopener noreferrer">Open in Google Maps</a>` +
+       `</div>`,
+       );
       marker.on("click", () => {
         map.setView([report.latitude, report.longitude], 17, { animate: true });
       });

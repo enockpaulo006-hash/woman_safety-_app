@@ -1,54 +1,102 @@
 {% extends "admin_portal/base.html" %}
 
 {% block page_actions %}
-<span class="portal-chip portal-chip-strong">Safe sharing</span>
-<span class="portal-chip">Anonymous reporting</span>
-<span class="portal-chip">Consent and data handling</span>
 {% endblock %}
 
 {% block content %}
+<section class="portal-header">
+    <div>
+        <span class="portal-eyebrow">
+            PRIVACY & COMPLIANCE
+        </span>
+        <h1>
+            Privacy & Security
+        </h1>
+        <p>
+            Protect survivor information, enforce responsible data sharing, and ensure that only authorised users can access sensitive incident information.
+        </p>
+    </div>
+</section>
+
 <section class="portal-layout portal-layout-2col">
-    <article class="portal-card portal-card-highlight">
-        <p class="portal-card-label">Privacy checklist</p>
-        <h3>Before sharing or exporting data</h3>
-        <!--<p class="portal-section-copy">Use this checklist whenever a report, map, CSV, or brief leaves the portal.</p>-->
-        <ol class="portal-roadmap">
-            <li>Use approved reports only.</li>
-            <li>Keep personal names, phone numbers, and exact identities out of summaries.</li>
-            <li>Use area-level location details unless a response team needs precise coordinates.</li>
-            <li>Share brief outputs only with authorised partners.</li>
-            <li>Record moderation decisions so the evidence trail stays clear.</li>
-        </ol>
-    </article>
-    <article class="portal-card">
-        <p class="portal-card-label">Who uses this page</p>
-        <div class="portal-module-list">
-            <div class="portal-module-row">
-                <strong>TAWLA and city gender desk</strong>
-                <span>Use trends for advocacy, programme planning, and policy response.</span>
-            </div>
-            <div class="portal-module-row">
-                <strong>Moderators and researchers</strong>
-                <span>Check data quality, anonymity, and ethical handling before analysis.</span>
-            </div>
-            <div class="portal-module-row">
-                <strong>Portal administrators</strong>
-                <span>Manage roles and make sure only authorised users can see each module.</span>
-            </div>
+   <article class="portal-card portal-card-highlight">
+    <div class="portal-section-heading">
+        <div>
+            <p class="portal-card-label">
+                Privacy Checklist
+            </p>
+            <h3>
+                Before Sharing Incident Data
+            </h3>
         </div>
-    </article>
+    </div>
+    <ol class="portal-roadmap">
+        <li>Use approved reports only.</li>
+        <li>Never include names, phone numbers or personal identifiers.</li>
+        <li>Share only area-level locations unless authorised personnel require precise coordinates.</li>
+        <li>Export reports only to authorised organisations.</li>
+        <li>Maintain a complete moderation and audit trail.</li>
+    </ol>
+<article class="portal-card">
+    <div class="portal-section-heading">
+        <div>
+            <p class="portal-card-label">
+                User Groups
+            </p>
+            <h3>
+                Who Uses This Module
+            </h3>
+        </div>
+    </div>
+    <div class="portal-module-list">
+        <div class="portal-module-row">
+            <strong>TAWLA & City Gender Desk</strong>
+            <span>Use incident trends for advocacy, planning and policy response.</span>
+        </div>
+        <div class="portal-module-row">
+            <strong>Moderators & Researchers</strong>
+            <span>Verify data quality, anonymity and ethical compliance.</span>
+        </div>
+        <div class="portal-module-row">
+            <strong>Portal Administrators</strong>
+            <span>Manage user roles, permissions and overall portal security.</span>
+        </div>
+    </div>
+</article>
 </section>
 
 <section class="portal-card">
-    <div class="portal-section-heading">
-        <div>
-            <p class="portal-card-label">Role setup</p>
-            <h3>Groups that control what each user sees</h3>
-        </div>
+    <div class="portal-summary-grid">
+    <article class="portal-summary-card">
+        <span>System Status</span>
+        <h2>Secure</h2>
+    </article>
+    <article class="portal-summary-card">
+        <span>User Roles</span>
+        <h2>7</h2>
+    </article>
+    <article class="portal-summary-card">
+        <span>Data Privacy</span>
+        <h2>Enabled</h2>
+    </article>
+</div>
+<br>
+<div class="portal-section-heading">
+    <div>
+        <p class="portal-card-label">
+            Access Control
+        </p>
+        <h3>
+            Portal User Roles & Permissions
+        </h3>
+        <p class="portal-section-copy">
+            Groups that control what each user sees.
+        </p>
     </div>
+</div>
     <div class="portal-table-wrap">
         <table class="portal-table">
-            <thead>
+            <thead class="portal-table-head">
                 <tr>
                     <th>Group name</th>
                     <th>User type</th>

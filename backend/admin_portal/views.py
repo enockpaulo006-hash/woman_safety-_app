@@ -222,9 +222,9 @@ def dashboard_view(request):
 @portal_access_required
 @role_required(PortalRole.ADMIN, PortalRole.MODERATOR)
 def moderation_view(request):
-    selected_status = request.GET.get("status", "all")
-    selected_category = request.GET.get("category", "all")
-    selected_location_type = request.GET.get("location_type", "all")
+    selected_status = request.GET.get("status") or "all"
+    selected_category = request.GET.get("category") or "all"
+    selected_location_type = request.GET.get("location_type") or "all"
     quality_filter = request.GET.get("quality", "all")
     review_mode = request.GET.get("view", "single")
 
@@ -299,8 +299,7 @@ def moderation_view(request):
             "page_title": "Review reports",
             "page_kicker": "Report decisions",
             "page_summary": (
-                "Check submitted incident reports, record a clear decision, and "
-                "approve only the records that should feed maps and briefs."
+                "Review submitted reports, verify the information, approve quality incidents and reject invalid reports."
             ),
             "review_reports": review_reports,
             "show_all_reports": review_mode == "all",
@@ -634,11 +633,8 @@ def privacy_view(request):
         "admin_portal/privacy.html",
         {
             **portal_context(request, "privacy"),
-            "page_title": "Check privacy",
-            "page_kicker": "Safe sharing checklist",
-            "page_summary": (
-                "Use this page before data is shared, printed, or exported so "
-                "anonymous reports stay protected."
-            ),
+            "page_title": None,
+            "page_kicker": None,
+            "page_summary": None,
         },
     )

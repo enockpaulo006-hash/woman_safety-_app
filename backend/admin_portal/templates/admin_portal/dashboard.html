@@ -1,6 +1,7 @@
 {% extends "admin_portal/base.html" %}
 
 {% block page_actions %}
+
 <span class="portal-chip portal-chip-strong">
     {{ total_reports }} Reports
 </span>
@@ -12,176 +13,377 @@
 <span class="portal-chip">
     {{ approved_total }} Approved
 </span>
+
 {% endblock %}
+
 
 {% block content %}
 
-<!-- KPI SECTION -->
+<!-- =====================================================
+     HERO
+===================================================== -->
+
+<section class="portal-hero">
+
+    <div class="portal-hero-content">
+
+        <span class="portal-card-label">
+            WOMEN SAFETY MONITORING
+        </span>
+
+        <h1>
+            Incident Monitoring Dashboard
+        </h1>
+
+        <p>
+            Monitor reports, review incidents, identify hotspot areas and
+            generate monthly safety intelligence from one dashboard.
+        </p>
+
+    </div>
+
+</section>
+
+
+<!-- =====================================================
+     KPI
+===================================================== -->
+
 <section class="portal-kpi-grid">
 
     <article class="portal-kpi-card">
-        <span>Total Reports</span>
-        <h2>{{ total_reports }}</h2>
-    </article>
 
-    <article class="portal-kpi-card">
-        <span>Pending Review</span>
-        <h2>{{ pending_total }}</h2>
-    </article>
-
-    <article class="portal-kpi-card">
-        <span>Approved Reports</span>
-        <h2>{{ approved_total }}</h2>
-    </article>
-
-    <article class="portal-kpi-card">
-        <span>Closed Reports</span>
-        <h2>{{ rejected_total }}</h2>
-    </article>
-
-</section>
-
-<!-- HOTSPOTS + TIMELINE -->
-<section class="portal-layout portal-layout-2col">
-
-    <article class="portal-card">
-
-        <div class="portal-section-heading">
-            <div>
-                <p class="portal-card-label">HOTSPOTS</p>
-                <h3>Highest Risk Areas</h3>
-            </div>
+        <div class="portal-kpi-icon">
+            📊
         </div>
 
-        <div class="portal-bar-chart">
+        <div>
 
-            {% for area in top_areas %}
-            <div class="portal-bar-row">
+            <span>Total Reports</span>
 
-                <div class="portal-bar-label">
-                    <strong>{{ area.label }}</strong>
-                    <span>{{ area.count }} report{{ area.count|pluralize }}</span>
-                </div>
-
-                <div class="portal-bar-track">
-                    <span
-                        class="portal-bar-fill"
-                        style="width: {{ area.bar_width|default:area.count }}%;">
-                    </span>
-                </div>
-
-            </div>
-            {% empty %}
-            <div class="portal-empty-state">
-                No hotspot data available.
-            </div>
-            {% endfor %}
+            <h2>{{ total_reports }}</h2>
 
         </div>
 
     </article>
 
-    <article class="portal-card">
 
-        <div class="portal-section-heading">
-            <div>
-                <p class="portal-card-label">TIMELINE</p>
-                <h3>Incident Time Analysis</h3>
-            </div>
+    <article class="portal-kpi-card">
+
+        <div class="portal-kpi-icon warning">
+            ⏳
         </div>
 
-        <div class="portal-bar-chart">
+        <div>
 
-            {% for time_item in time_chart %}
-            <div class="portal-bar-row">
+            <span>Pending Review</span>
 
-                <div class="portal-bar-label">
-                    <strong>{{ time_item.label }}</strong>
-                    <span>{{ time_item.percent }}%</span>
-                </div>
+            <h2>{{ pending_total }}</h2>
 
-                <div class="portal-bar-track">
-                    <span
-                        class="portal-bar-fill portal-bar-fill-alt"
-                        style="width: {{ time_item.bar_width }}%;">
-                    </span>
-                </div>
+        </div>
 
-            </div>
-            {% endfor %}
+    </article>
+
+
+    <article class="portal-kpi-card">
+
+        <div class="portal-kpi-icon success">
+            ✔
+        </div>
+
+        <div>
+
+            <span>Approved Reports</span>
+
+            <h2>{{ approved_total }}</h2>
+
+        </div>
+
+    </article>
+
+
+    <article class="portal-kpi-card">
+
+        <div class="portal-kpi-icon danger">
+            ✖
+        </div>
+
+        <div>
+
+            <span>Closed Reports</span>
+
+            <h2>{{ rejected_total }}</h2>
 
         </div>
 
     </article>
 
 </section>
+<!-- =====================================================
+     ANALYTICS
+===================================================== -->
 
-<!-- CATEGORIES + RECENT REPORTS -->
 <section class="portal-layout portal-layout-2col">
+
+    <!-- INCIDENT TREND -->
 
     <article class="portal-card">
 
         <div class="portal-section-heading">
+
             <div>
-                <p class="portal-card-label">CATEGORIES</p>
-                <h3>Most Reported Incidents</h3>
+
+                <p class="portal-card-label">
+                    Analytics
+                </p>
+
+                <h3>
+                    Incident Trend
+                </h3>
+
             </div>
+
+        </div>
+
+        <div class="chart-box">
+
+            <canvas id="incidentTrendChart"></canvas>
+
+        </div>
+
+    </article>
+
+
+    <!-- INCIDENT CATEGORIES -->
+
+    <article class="portal-card">
+
+        <div class="portal-section-heading">
+
+            <div>
+
+                <p class="portal-card-label">
+                    Analytics
+                </p>
+
+                <h3>
+                    Incident Categories
+                </h3>
+
+            </div>
+
+        </div>
+
+        <div class="chart-box chart-box-small">
+
+            <canvas id="categoryChart"></canvas>
+
+        </div>
+
+    </article>
+
+</section>
+
+
+<!-- =====================================================
+     QUICK SUMMARY
+===================================================== -->
+
+<section class="portal-layout portal-layout-3col">
+
+    <article class="portal-card portal-summary-card">
+
+        <span class="portal-card-label">
+            Highest Risk Area
+        </span>
+
+        <h3>
+
+            {% if top_areas %}
+                {{ top_areas.0.label }}
+            {% else %}
+                No data
+            {% endif %}
+
+        </h3>
+
+    </article>
+
+
+    <article class="portal-card portal-summary-card">
+
+        <span class="portal-card-label">
+            Most Common Incident
+        </span>
+
+        <h3>
+
+            {% if top_categories %}
+                {{ top_categories.0.label }}
+            {% else %}
+                No data
+            {% endif %}
+
+        </h3>
+
+    </article>
+
+
+    <article class="portal-card portal-summary-card">
+
+        <span class="portal-card-label">
+            Peak Time
+        </span>
+        
+    </article>
+
+</section>
+<!-- =====================================================
+     REPORTS
+===================================================== -->
+
+<section class="portal-layout portal-layout-2col">
+
+    <!-- MOST REPORTED INCIDENTS -->
+
+    <article class="portal-card">
+
+        <div class="portal-section-heading">
+
+            <div>
+
+                <p class="portal-card-label">
+                    Categories
+                </p>
+
+                <h3>
+                    Most Reported Incidents
+                </h3>
+
+            </div>
+
         </div>
 
         <div class="portal-module-list">
 
             {% for category in top_categories %}
+
             <div class="portal-module-row">
-                <strong>{{ category.label }}</strong>
+
+                <strong>
+                    {{ category.label }}
+                </strong>
+
                 <span>
-                    {{ category.count }} approved report{{ category.count|pluralize }}
+                    {{ category.count }} Reports
                 </span>
+
             </div>
+
             {% empty %}
-            <div class="portal-module-row">
-                <strong>No category data</strong>
-                <span>Approve reports to populate statistics.</span>
+
+            <div class="portal-empty-state">
+                No category data available.
             </div>
+
             {% endfor %}
 
         </div>
 
     </article>
 
+
+    <!-- RECENT REPORTS -->
+
     <article class="portal-card">
 
         <div class="portal-section-heading">
+
             <div>
-                <p class="portal-card-label">RECENT REPORTS</p>
-                <h3>Latest Submissions</h3>
+
+                <p class="portal-card-label">
+                    Reports
+                </p>
+
+                <h3>
+                    Recent Reports
+                </h3>
+
             </div>
+
         </div>
 
         <table class="portal-table">
 
             <thead>
+
                 <tr>
+
                     <th>Reference</th>
+
                     <th>Category</th>
+
                     <th>Status</th>
+
                 </tr>
+
             </thead>
 
             <tbody>
 
-                {% for report in recent_reports %}
-                <tr>
-                    <td>{{ report.public_reference }}</td>
-                    <td>{{ report.category.name }}</td>
-                    <td>{{ report.get_status_display }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="3">
-                        No reports available.
-                    </td>
-                </tr>
-                {% endfor %}
+            {% for report in recent_reports %}
+
+            <tr>
+
+                <td>{{ report.public_reference }}</td>
+
+                <td>{{ report.category.name }}</td>
+
+                <td>
+
+                    {% if report.status == "approved" %}
+
+                        <span class="status-badge status-approved">
+                            Approved
+                        </span>
+
+                    {% elif report.status == "submitted" or report.status == "under_review" %}
+
+                        <span class="status-badge status-pending">
+                            Pending
+                        </span>
+
+                    {% elif report.status == "rejected" %}
+
+                        <span class="status-badge status-rejected">
+                            Rejected
+                        </span>
+
+                    {% else %}
+
+                        <span class="status-badge">
+                            {{ report.get_status_display }}
+                        </span>
+
+                    {% endif %}
+
+                </td>
+
+            </tr>
+
+            {% empty %}
+
+            <tr>
+
+                <td colspan="3">
+
+                    No reports available.
+
+                </td>
+
+            </tr>
+
+            {% endfor %}
 
             </tbody>
 
@@ -190,5 +392,13 @@
     </article>
 
 </section>
+
+{% endblock %}
+
+{% block extra_scripts %}
+
+{{ top_categories|json_script:"top-categories-data" }}
+
+{{ time_chart|json_script:"time-chart-data" }}
 
 {% endblock %}

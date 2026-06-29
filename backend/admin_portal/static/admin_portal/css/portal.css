@@ -1383,3 +1383,17 @@ gap:6px;
 .portal-card-highlight{
     border-left:5px solid #2563EB;
 }
+.portal-btn-secondary{
+    padding:8px 16px;
+    border:none;
+    border-radius:10px;
+    background:#EEF2FF;
+    color:#1D4ED8;
+    font-weight:600;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.portal-btn-secondary:hover{
+    background:#DBEAFE;
+}

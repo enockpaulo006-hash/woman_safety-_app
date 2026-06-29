@@ -1,0 +1,339 @@
+{% extends "admin_portal/base.html" %}
+
+{% block page_actions %}
+<span class="portal-chip portal-chip-strong">System settings</span>
+<span class="portal-chip">Administrator only</span>
+{% endblock %}
+
+{% block content %}
+
+<section class="portal-header">
+    <div>
+        <span class="portal-eyebrow">
+            SYSTEM SETTINGS
+        </span>
+
+        <h1>
+            Portal Settings
+        </h1>
+
+        <p>
+            Configure system preferences, users, categories and portal information.
+        </p>
+    </div>
+</section>
+
+<section class="portal-summary-grid">
+
+    <article class="portal-summary-card">
+        <span>Portal Version</span>
+        <h2>v1.0</h2>
+    </article>
+
+    <article class="portal-summary-card">
+        <span>User Roles</span>
+       <h2>{{ user_count }}</h2>
+    </article>
+
+    <article class="portal-summary-card">
+        <span>Categories</span>
+       <h2>{{ category_count }}</h2>
+    </article>
+
+    <article class="portal-summary-card">
+        <span>Status</span>
+        <h2>{{ report_count }}</h2>
+<span>Total Reports</span>
+    </article>
+
+</section>
+<section class="portal-layout portal-layout-2col">
+
+    <article class="portal-card portal-card-highlight">
+
+        <div class="portal-section-heading">
+
+            <div>
+
+                <p class="portal-card-label">
+                    General Settings
+                </p>
+
+                <h3>
+                    Portal Information
+                </h3>
+
+                <p class="portal-section-copy">
+                    Basic information about the Women Safety Monitoring Portal.
+                </p>
+
+            </div>
+
+        </div>
+
+        <div class="portal-module-list">
+
+            <div class="portal-module-row">
+                <strong>Portal Name</strong>
+                <span>Women Safety Monitoring Portal</span>
+            </div>
+
+            <div class="portal-module-row">
+                <strong>Organisation</strong>
+                <span>TAWLA & Local Government Authorities</span>
+            </div>
+
+            <div class="portal-module-row">
+                <strong>Version</strong>
+                <span>Version 1.0</span>
+            </div>
+
+            <div class="portal-module-row">
+                <strong>Database</strong>
+                <span>PostgreSQL + PostGIS</span>
+            </div>
+
+            <div class="portal-module-row">
+                <strong>Server Status</strong>
+                <span style="color:#22c55e;font-weight:600;">
+                    ● Online
+                </span>
+            </div>
+
+        </div>
+
+    </article>
+
+    <article class="portal-card">
+
+        <div class="portal-section-heading">
+
+            <div>
+
+                <p class="portal-card-label">
+                    Quick Actions
+                </p>
+
+                <h3>
+                    Administrator Tools
+                </h3>
+
+            </div>
+
+        </div>
+
+        <div class="portal-module-list">
+
+            <div class="portal-module-row">
+                <strong>Manage Users</strong>
+                <span>Create and edit portal accounts.</span>
+            </div>
+
+            <div class="portal-module-row">
+                <strong>Incident Categories</strong>
+                <span>Update reporting categories.</span>
+            </div>
+
+            <div class="portal-module-row">
+                <strong>Location Types</strong>
+                <span>Manage supported public locations.</span>
+            </div>
+
+            <div class="portal-module-row">
+                <strong>System Backup</strong>
+                <span>Export and restore portal data.</span>
+            </div>
+
+        </div>
+
+    </article>
+
+</section>
+<section class="portal-card">
+
+    <div class="portal-section-heading">
+
+        <div>
+
+            <p class="portal-card-label">
+                User Management
+            </p>
+
+            <h3>
+                Portal Users & Roles
+            </h3>
+
+            <p class="portal-section-copy">
+                Manage administrator accounts and assign portal roles.
+            </p>
+
+        </div>
+
+        <button class="portal-btn-primary" type="button">
+            + Add User
+        </button>
+
+    </div>
+
+    <div class="portal-table-wrap">
+
+        <table class="portal-table">
+
+            <thead class="portal-table-head">
+
+                <tr>
+
+                    <th>Full Name</th>
+
+                    <th>Username</th>
+
+                    <th>Role</th>
+
+                    <th>Status</th>
+
+                    <th>Action</th>
+
+                </tr>
+
+            </thead>
+
+           <tbody>
+    {% for user in users %}
+    <tr>
+        <td>
+            {{ user.get_full_name|default:user.username }}
+        </td>
+        <td>
+            {{ user.username }}
+        </td>
+        <td>
+            {% if user.is_superuser %}
+                Administrator
+            {% elif user.is_staff %}
+                Staff
+            {% else %}
+                User
+            {% endif %}
+        </td>
+        <td>
+            {% if user.is_active %}
+            <span class="portal-status-badge portal-status-approved">
+                Active
+            </span>
+            {% else %}
+            <span class="portal-status-badge portal-status-rejected">
+                Disabled
+            </span>
+            {% endif %}
+        </td>
+        <td>
+            <button
+                type="button"
+                class="portal-btn-secondary">
+                View
+            </button>
+        </td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="5">
+            No users found.
+        </td>
+    </tr>
+    {% endfor %}
+</tbody>
+        </table>
+    </div>
+
+</section>
+<section class="portal-layout portal-layout-2col">
+    <article class="portal-card">
+        <div class="portal-section-heading">
+            <div>
+                <p class="portal-card-label">
+                    Incident Categories
+                </p>
+                <h3>
+                    Manage Report Categories
+                </h3>
+            </div>
+            <a
+    href="{% url 'admin-category-list' %}"
+    class="portal-btn-primary">
+    Manage Categories
+</a>
+        </div>
+
+        <div class="portal-module-list">
+    {% for category in categories %}
+    <div class="portal-module-row">
+        <strong>
+            {{ category.name }}
+        </strong>
+        <span>
+            {% if category.is_active %}
+                Active
+            {% else %}
+                Inactive
+            {% endif %}
+        </span>
+    </div>
+    {% empty %}
+    <div class="portal-module-row">
+        <strong>
+            No categories found
+        </strong>
+    </div>
+    {% endfor %}
+</div>
+
+    </article>
+
+    <article class="portal-card">
+
+        <div class="portal-section-heading">
+
+            <div>
+
+                <p class="portal-card-label">
+                    Location Types
+                </p>
+
+                <h3>
+                    Manage Public Locations
+                </h3>
+
+            </div>
+
+            <button class="portal-btn-primary" type="button">
+                + Add Location
+            </button>
+
+        </div>
+
+        <div class="portal-module-list">
+
+    {% for location in location_types %}
+
+    <div class="portal-module-row">
+        <strong>
+            {{ location.name }}
+        </strong>
+        <span>
+            {% if location.is_active %}
+                Enabled
+            {% else %}
+                Disabled
+            {% endif %}
+        </span>
+    </div>
+    {% empty %}
+    <div class="portal-module-row">
+        <strong>
+            No location types found
+        </strong>
+    </div>
+    {% endfor %}
+</div>
+    </article>
+</section>

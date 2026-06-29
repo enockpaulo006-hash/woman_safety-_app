@@ -3,6 +3,7 @@ from datetime import date, timedelta
 
 from django.contrib import messages
 from django.contrib.auth import login, logout
+from django.contrib.auth import get_user_model
 from django.db import DatabaseError
 from django.db.models import Q
 from django.http import HttpResponse
@@ -18,6 +19,7 @@ from .forms import PortalAuthenticationForm
 from .roles import PortalRole, portal_context, role_required
 from reports.models import IncidentCategory, IncidentReport, LocationType, ReportStatusHistory
 
+User = get_user_model()
 
 def public_hotspot_map_view(request):
     return render(request, "admin_portal/public_hotspot_map.html", {
@@ -639,12 +641,58 @@ def privacy_view(request):
         },
     )
 def settings_view(request):
+    users = User.objects.order_by("username")
+
+    categories = IncidentCategory.objects.filter(
+        is_active=True
+    ).order_by("sort_order", "name")
+
+    location_types = LocationType.objects.filter(
+        is_active=True
+    ).order_by("sort_order", "name")
+
+    context = {
+        **portal_context(request, "settings"),
+
+        "page_title": "Settings",
+        "page_summary": "",
+
+        "users": users,
+        "categories": categories,
+        "location_types": location_types,
+
+        "user_count": users.count(),
+        "category_count": categories.count(),
+        "location_type_count": location_types.count(),
+        "report_count": IncidentReport.objects.count(),
+    }
+
     return render(
         request,
         "admin_portal/settings.html",
+        context,
+    )
+    
+    @portal_access_required
+def category_list_view(request):
+
+    categories = IncidentCategory.objects.order_by(
+        "sort_order",
+        "name",
+    )
+
+    return render(
+        request,
+        "admin_portal/categories.html",
         {
             **portal_context(request, "settings"),
-            "page_title": "Settings",
-            "page_summary": "",
+
+            "page_title": "Incident Categories",
+
+            "page_summary": "Manage incident categories.",
+
+            "categories": categories,
+
+            "total_categories": categories.count(),
         },
     )

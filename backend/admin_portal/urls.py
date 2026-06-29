@@ -1,7 +1,7 @@
 from django.shortcuts import redirect
 from django.urls import path
 
-from backend.reports import views
+from . import views
 
 from .views import (
     briefs_export_view,
@@ -39,4 +39,9 @@ path(
     "settings/",
     views.settings_view,
     name="admin-settings",
+),
+path(
+    "settings/categories/",
+    views.category_list_view,
+    name="admin-category-list",
 ),

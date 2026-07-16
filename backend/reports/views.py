@@ -4,6 +4,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import EmergencySOS
+from rest_framework.authentication import TokenAuthentication
 from .serializers import EmergencySOSCreateSerializer
 from .models import IncidentCategory, LocationType, IncidentReport
 from .serializers import (
@@ -74,9 +75,15 @@ class IncidentReportCreateAPIView(APIView):
         )
 
 class EmergencySOSCreateAPIView(APIView):
+    authentication_classes = [TokenAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
+        print("========== REQUEST ==========")
+        print("Authorization:", request.headers.get("Authorization"))
+        print("User:", request.user)
+        print("Auth:", request.auth)
+
         serializer = EmergencySOSCreateSerializer(
             data=request.data,
             context={"request": request},
@@ -94,7 +101,6 @@ class EmergencySOSCreateAPIView(APIView):
             },
             status=status.HTTP_201_CREATED,
         )
-
 
 class HotspotAPIView(APIView):
     permission_classes = [permissions.AllowAny]

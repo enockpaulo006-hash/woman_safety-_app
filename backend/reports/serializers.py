@@ -136,19 +136,20 @@ class EmergencySOSCreateSerializer(serializers.Serializer):
             f"SOS-{now:%Y%m%d}-"
             f"{uuid.uuid4().hex[:6].upper()}"
         )
+        
         emergency = EmergencySOS.objects.create(
-            id=uuid.uuid4(),
-            reference_number=reference_number,
-            victim_id=request.user.id,
-            phone_number=validated_data.get("phone_number"),
-            latitude=validated_data["latitude"],
-            longitude=validated_data["longitude"],
-            accuracy=validated_data.get("accuracy"),
-            status=EmergencySOS.Status.NEW,
-            created_at=now,
-            updated_at=now,
-            is_active=True,
+             id=uuid.uuid4(),
+             reference_number=reference_number,
+             phone_number=validated_data.get("phone_number"),
+             latitude=validated_data["latitude"],
+             longitude=validated_data["longitude"],
+             accuracy=validated_data.get("accuracy"),
+             status=EmergencySOS.Status.NEW,
+             created_at=now,
+             updated_at=now,
+             is_active=True,
         )
+        
         EmergencyStatusHistory.objects.create(
             id=uuid.uuid4(),
             emergency=emergency,

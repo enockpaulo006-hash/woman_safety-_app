@@ -46,20 +46,27 @@ if (session == null) {
     "Please sign in before sending an emergency SOS.",
   );
 }
-  
-  final response = await _client
-      .post(
-        _uri("/emergency/sos/"),
-        headers:{
-          "Content-Type": "application/json",
-           "Authorization": "Token ${session.token}",
-        },
-        body: jsonEncode(payload),
-      )
-      .timeout(_requestTimeout);
 
-  debugPrint("STATUS: ${response.statusCode}");
-  debugPrint("BODY: ${response.body}");
+final headers = {
+  "Content-Type": "application/json",
+  "Authorization": "Token ${session.token}",
+};
+
+debugPrint("===== TOKEN =====");
+debugPrint(session.token);
+
+debugPrint("===== HEADERS =====");
+debugPrint(headers.toString());
+
+final response = await _client.post(
+  _uri("/emergency/sos/"),
+  headers: headers,
+  body: jsonEncode(payload),
+).timeout(_requestTimeout);
+
+debugPrint("===== RESPONSE =====");
+debugPrint("STATUS: ${response.statusCode}");
+debugPrint("BODY: ${response.body}");
 
   final body = _decodeResponse(response);
 

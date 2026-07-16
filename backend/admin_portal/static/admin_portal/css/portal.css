@@ -1498,3 +1498,190 @@ gap:6px;
     padding:22px;
     min-height:420px;
 }
+
+
+/* Emergency Dashboard KPI Icons*/
+.portal-kpi-card{
+    display:flex;
+    align-items:center;
+    gap:18px;
+}
+
+.portal-kpi-icon{
+    width:64px;
+    height:64px;
+    border-radius:18px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    font-size:28px;
+
+    color:#fff;
+
+    flex-shrink:0;
+}
+
+.portal-kpi-icon.danger{
+    background:#dc2626;
+}
+
+.portal-kpi-icon.warning{
+    background:#f59e0b;
+}
+
+.portal-kpi-icon.primary{
+    background:#2563eb;
+}
+
+.portal-kpi-icon.success{
+    background:#16a34a;
+}
+
+.portal-kpi-card span{
+    display:block;
+    color:#64748b;
+    font-size:.92rem;
+    margin-bottom:6px;
+}
+
+.portal-kpi-card h2{
+    margin:0;
+    font-size:2rem;
+    font-weight:800;
+    color:#0f172a;
+}
+
+.emergency-actions{
+    display:flex;
+    gap:12px;
+    margin-top:18px;
+}
+
+.emergency-actions .portal-button{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+}
+
+.emergency-actions i{
+    font-size:1rem;
+}
+
+/*Emergency Cards */
+.emergency-list{
+    display:grid;
+    gap:22px;
+
+}
+
+.emergency-card{
+    background:#fff;
+    border-radius:18px;
+    padding:22px;
+    border:1px solid #e5e7eb;
+    box-shadow:0 10px 25px rgba(15,23,42,.08);
+    transition:.25s;
+
+}
+
+.emergency-card:hover{
+    transform:translateY(-3px);
+    box-shadow:0 16px 36px rgba(15,23,42,.12);
+}
+
+.emergency-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    margin-bottom:20px;
+}
+
+.emergency-header h3{
+    margin:0;
+    font-size:1.2rem;
+
+}
+
+.emergency-time{
+    color:#64748b;
+    margin-top:6px;
+    display:flex;
+    gap:8px;
+    align-items:center;
+
+}
+
+.status-badge{
+    padding:8px 16px;
+    border-radius:50px;
+    font-weight:700;
+    font-size:.82rem;
+
+}
+
+.status-new{
+    background:#fee2e2;
+    color:#dc2626;
+}
+
+.status-officer_assigned{
+    background:#fef3c7;
+    color:#d97706;
+
+}
+
+.status-on_the_way{
+    background:#dbeafe;
+    color:#2563eb;
+
+}
+
+.status-resolved{
+    background:#dcfce7;
+    color:#16a34a;
+
+}
+
+.emergency-body{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:18px;
+    margin-bottom:24px;
+
+}
+
+.info-item{
+    display:flex;
+    gap:14px;
+    align-items:center;
+}
+
+.info-item i{
+    width:48px;
+    height:48px;
+    border-radius:12px;
+    background:#eff6ff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#2563eb;
+    font-size:20px;
+}
+
+.info-item small{
+    display:block;
+    color:#64748b;
+}
+
+.info-item strong{
+    display:block;
+    font-size:15px;
+}
+
+.emergency-footer{
+    display:flex;
+    gap:12px;
+}

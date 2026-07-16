@@ -39,31 +39,55 @@
 <section class="portal-kpi-grid">
 
     <article class="portal-kpi-card">
+
+        <div class="portal-kpi-icon danger">
+            <i class="bi bi-exclamation-octagon-fill"></i>
+        </div>
+
         <div>
-            <span>Active SOS</span>
+            <span>Active Emergencies</span>
             <h2>{{ active_count }}</h2>
         </div>
+
     </article>
 
     <article class="portal-kpi-card">
+
+        <div class="portal-kpi-icon warning">
+            <i class="bi bi-person-check-fill"></i>
+        </div>
+
         <div>
-            <span>Assigned</span>
+            <span>Assigned Officers</span>
             <h2>{{ assigned_count }}</h2>
         </div>
+
     </article>
 
     <article class="portal-kpi-card">
+
+        <div class="portal-kpi-icon primary">
+            <i class="bi bi-truck"></i>
+        </div>
+
         <div>
-            <span>On The Way</span>
+            <span>Units Responding</span>
             <h2>{{ on_the_way_count }}</h2>
         </div>
+
     </article>
 
     <article class="portal-kpi-card">
+
+        <div class="portal-kpi-icon success">
+            <i class="bi bi-check-circle-fill"></i>
+        </div>
+
         <div>
             <span>Resolved Today</span>
             <h2>{{ resolved_today }}</h2>
         </div>
+
     </article>
 
 </section>
@@ -80,41 +104,96 @@
         </div>
     </div>
 
-    <table class="portal-table">
+    <div class="emergency-list">
 
-        <thead>
-            <tr>
-                <th>Reference</th>
-                <th>Status</th>
-                <th>Phone</th>
-                <th>Time</th>
-            </tr>
-        </thead>
+{% for emergency in emergencies %}
 
-        <tbody>
+<div class="emergency-card">
 
-        {% for emergency in emergencies %}
+    <div class="emergency-header">
 
-        <tr>
-            <td>{{ emergency.reference_number }}</td>
-            <td>{{ emergency.status }}</td>
-            <td>{{ emergency.phone_number|default:"-" }}</td>
-            <td>{{ emergency.created_at }}</td>
-        </tr>
+        <div>
 
-        {% empty %}
+            <h3>{{ emergency.reference_number }}</h3>
 
-        <tr>
-            <td colspan="4">
-                No emergency SOS requests.
-            </td>
-        </tr>
+            <p class="emergency-time">
+                <i class="bi bi-clock-history"></i>
+                {{ emergency.created_at }}
+            </p>
 
-        {% endfor %}
+        </div>
 
-        </tbody>
+        <span class="status-badge status-{{ emergency.status|lower }}">
+            {{ emergency.status }}
+        </span>
 
-    </table>
+    </div>
+
+
+    <div class="emergency-body">
+        <div class="info-item">
+            <i class="bi bi-telephone-fill"></i>
+            <div>
+                <small>Phone</small>
+                <strong>
+                    {{ emergency.phone_number|default:"Not Available" }}
+                </strong>
+            </div>
+        </div>
+
+        <div class="info-item">
+            <i class="bi bi-geo-alt-fill"></i>
+            <div>
+                <small>Location</small>
+                <strong>
+                   {{ emergency.location_name|default:"Unknown Location" }}
+                </strong>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="emergency-footer">
+
+        <button class="portal-button">
+
+            <i class="bi bi-eye-fill"></i>
+
+            View
+
+        </button>
+
+        <button class="portal-button portal-button-secondary">
+
+            <i class="bi bi-person-check-fill"></i>
+
+            Assign
+
+        </button>
+
+        <button class="portal-button portal-button-success">
+
+            <i class="bi bi-truck"></i>
+
+            Dispatch
+
+        </button>
+
+    </div>
+
+</div>
+
+{% empty %}
+
+<div class="portal-empty">
+
+No emergency SOS requests.
+
+</div>
+
+{% endfor %}
+
+</div>
 
 </article>
 

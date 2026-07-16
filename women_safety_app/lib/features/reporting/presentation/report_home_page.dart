@@ -458,64 +458,87 @@ Future<Map<String, dynamic>> _getHotspotsData() async {
   }
 
   Future<void> _activateSosSupport() async {
-    final strings = _strings;
-    if (_isPreparingSos) {
-      return;
-    }
+  final strings = _strings;
 
-    setState(() {
-      _isPreparingSos = true;
-    });
-
-    Position? position;
-
-    try {
-      position = await _captureCurrentPosition();
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _capturedLatitude = position!.latitude;
-        _capturedLongitude = position.longitude;
-      });
-    } catch (_) {
-      position = null;
-    }
-
-    try {
-       if (position == null) {
-         throw Exception("Location is required to send an emergency SOS.");
-  }
-
-      final result = await EmergencyApiService().sendEmergencySOS(
-        latitude: position.latitude,
-        longitude: position.longitude,
-  );
-
-       setState(() {
-        _emergencyReference = result.referenceNumber;
-        _emergencyStatus = result.status;
-       _isPreparingSos = false;
-  });
-
-     if (!mounted) {
-       return;
-    }
-
-      _showSuccessSnack("Emergency SOS sent successfully.");
-    } catch (_) {
-  if (!mounted) {
+  if (_isPreparingSos) {
     return;
   }
 
   setState(() {
-    _isPreparingSos = false;
+    _isPreparingSos = true;
   });
 
-  _showErrorSnack(strings.text('sosActivationFailed'));
-}
+  Position? position;
+
+  try {
+    position = await _captureCurrentPosition();
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _capturedLatitude = position!.latitude;
+      _capturedLongitude = position.longitude;
+    });
+  } catch (_) {
+    position = null;
   }
+
+  try {
+    if (position == null) {
+      throw Exception(
+        "Location is required to send an emergency SOS.",
+      );
+    }
+
+    // Reverse Geocoding
+
+    final location =
+        await ReverseGeocodingService().getLocationDetails(
+      latitude: position.latitude,
+      longitude: position.longitude,
+    );
+
+    final locationName =
+        location["location_name"] ?? "";
+
+    debugPrint("===== LOCATION NAME =====");
+    debugPrint(locationName);
+
+    final result =
+        await EmergencyApiService().sendEmergencySOS(
+      latitude: position.latitude,
+      longitude: position.longitude,
+      locationName: locationName,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _emergencyReference = result.referenceNumber;
+      _emergencyStatus = result.status;
+      _isPreparingSos = false;
+    });
+
+    _showSuccessSnack(
+      "Emergency SOS sent successfully.",
+    );
+  } catch (_) {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _isPreparingSos = false;
+    });
+
+    _showErrorSnack(
+      strings.text("sosActivationFailed"),
+    );
+  }
+  }
+
 
   Future<void> _showSosReadySheet({
     required String message,

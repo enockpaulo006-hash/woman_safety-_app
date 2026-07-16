@@ -735,6 +735,13 @@ def emergency_dashboard_view(request):
     emergencies = EmergencySOS.objects.filter(
         is_active=True
     ).order_by("-created_at")
+    
+    for e in emergencies[:5]:
+        print(
+            e.reference_number,
+            "|",
+             e.location_name,
+        )
 
     active_count = emergencies.exclude(
         status=EmergencySOS.Status.RESOLVED

@@ -129,6 +129,14 @@ class EmergencySOSCreateSerializer(serializers.Serializer):
         allow_null=True,
         max_length=20,
     )
+    
+    location_name = serializers.CharField(
+    required=False,
+    allow_blank=True,
+    allow_null=True,
+    max_length=255,
+ )
+    
     def create(self, validated_data):
         request = self.context["request"]
         now = timezone.now()
@@ -141,6 +149,7 @@ class EmergencySOSCreateSerializer(serializers.Serializer):
              id=uuid.uuid4(),
              reference_number=reference_number,
              phone_number=validated_data.get("phone_number"),
+             location_name=validated_data.get("location_name"),
              latitude=validated_data["latitude"],
              longitude=validated_data["longitude"],
              accuracy=validated_data.get("accuracy"),

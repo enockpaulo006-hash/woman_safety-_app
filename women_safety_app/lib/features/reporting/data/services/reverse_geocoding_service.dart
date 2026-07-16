@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 
 class ReverseGeocodingService {
   Future<Map<String, String>> getLocationDetails({
@@ -22,26 +23,51 @@ class ReverseGeocodingService {
     );
 
     if (response.statusCode != 200) {
-      return {};
-    }
+  debugPrint("===== REVERSE GEOCODING FAILED =====");
+  debugPrint("STATUS: ${response.statusCode}");
+  debugPrint("BODY: ${response.body}");
+  return {};
+}
 
     final data = jsonDecode(response.body);
 
+    debugPrint("===== NOMINATIM RESPONSE =====");
+    debugPrint(response.body);
+
     final address = data["address"] ?? {};
 
+    final ward = address["suburb"] ??
+    address["city_district"] ??
+    address["neighbourhood"] ??
+    "";
+
+    final district = address["county"] ??
+    address["municipality"] ??
+    "";
+
+    final region = address["state"] ?? "";
+
+    final country = address["country"] ?? "";
+
+    final locationName = [
+     ward,
+     district,
+     region,
+    ]
+    .where((e) => e.toString().trim().isNotEmpty)
+    .join(", ");
+
+    debugPrint("WARD: $ward");
+    debugPrint("DISTRICT: $district");
+    debugPrint("REGION: $region");
+    debugPrint("LOCATION NAME: $locationName");
+
     return {
-      "ward": address["suburb"] ??
-          address["city_district"] ??
-          address["neighbourhood"] ??
-          "",
-
-      "district": address["county"] ??
-          address["municipality"] ??
-          "",
-
-      "region": address["state"] ?? "",
-
-      "country": address["country"] ?? "",
-    };
+      "ward": ward,
+      "district": district,
+      "region": region,
+      "country": country,
+      "location_name": locationName,
+};
   }
 }

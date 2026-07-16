@@ -24,6 +24,7 @@ class EmergencyApiService {
     required double longitude,
     double? accuracy,
     String? phoneNumber,
+    String? locationName,
 }) async {
 
   debugPrint("===== SENDING SOS =====");
@@ -35,6 +36,7 @@ class EmergencyApiService {
     "longitude": longitude,
     "accuracy": accuracy,
     "phone_number": phoneNumber,
+    "location_name": locationName,
   };
 
   debugPrint(_uri("/emergency/sos/").toString());
@@ -57,6 +59,9 @@ debugPrint(session.token);
 
 debugPrint("===== HEADERS =====");
 debugPrint(headers.toString());
+
+debugPrint("===== PAYLOAD =====");
+debugPrint(jsonEncode(payload));
 
 final response = await _client.post(
   _uri("/emergency/sos/"),

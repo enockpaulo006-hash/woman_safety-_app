@@ -83,6 +83,7 @@ class EmergencySOSCreateAPIView(APIView):
         print("Authorization:", request.headers.get("Authorization"))
         print("User:", request.user)
         print("Auth:", request.auth)
+        print("REQUEST DATA:", request.data)
 
         serializer = EmergencySOSCreateSerializer(
             data=request.data,

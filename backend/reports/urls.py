@@ -1,9 +1,16 @@
 from django.urls import path
-
 from .views import (
     HealthCheckAPIView,
     IncidentCategoryListAPIView,
     IncidentReportCreateAPIView,
+    LocationTypeListAPIView,
+    HotspotAPIView,
+)
+from .views import (
+    HealthCheckAPIView,
+    IncidentCategoryListAPIView,
+    IncidentReportCreateAPIView,
+    EmergencySOSCreateAPIView,
     LocationTypeListAPIView,
     HotspotAPIView,
 )
@@ -28,6 +35,11 @@ urlpatterns = [
         "reports/",
         IncidentReportCreateAPIView.as_view(),
         name="incident-report-create",
+    ),
+    path(
+    "emergency/sos/",
+    EmergencySOSCreateAPIView.as_view(),
+    name="emergency-sos-create",
     ),
     path(
         "hotspots/",

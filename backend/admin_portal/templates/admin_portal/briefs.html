@@ -65,44 +65,6 @@
             </div>
         </div>
     </article>
-    <article class="portal-card">
-    <p class="portal-card-label">
-        Quick Statistics
-    </p>
-    <div class="portal-summary-grid">
-        <article class="portal-summary-card">
-            <span>Highest Risk Area</span>
-            <h2>
-                {% if area_chart %}
-                    {{ area_chart.0.label }}
-                {% else %}
-                    —
-                {% endif %}
-            </h2>
-        </article>
-        <article class="portal-summary-card">
-            <span>Top Category</span>
-            <h2>
-                {% if category_chart %}
-                    {{ category_chart.0.label }}
-                {% else %}
-                    —
-                {% endif %}
-            </h2>
-        </article>
-        <article class="portal-summary-card">
-            <span>Place Type</span>
-            <h2>
-                {% if location_type_chart %}
-                    {{ location_type_chart.0.label }}
-                {% else %}
-                    —
-                {% endif %}
-            </h2>
-        </article>
-    </div>
-
-</article>
 </section>
 
 <section class="portal-card portal-brief-document" data-brief-document>

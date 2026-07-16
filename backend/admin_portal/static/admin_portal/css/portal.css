@@ -70,7 +70,8 @@ textarea{
 .portal-shell{
     display:grid;
     grid-template-columns:270px 1fr;
-    min-height:100vh;
+    height:100vh;
+    overflow:hidden;
 }
 
 /* =========================
@@ -78,12 +79,13 @@ textarea{
 ========================= */
 .portal-sidebar{
     background:var(--sidebar);
-    color:white;
-    padding:26px;
+    color:#fff;
+    padding:20px;
     display:flex;
     flex-direction:column;
+    height:100vh;
+    overflow:hidden;
 }
-
 /* =========================
    BRAND
 ========================= */
@@ -93,26 +95,25 @@ textarea{
 }
 
 .portal-brand-icon{
-    width:70px;
-    height:70px;
+    width:50px;
+    height:50px;
     margin:auto;
-    border-radius:18px;
+    border-radius:14px;
     background:rgba(255,255,255,.08);
     display:flex;
     align-items:center;
     justify-content:center;
-    font-size:32px;
+    font-size:22px;
 }
-
 .portal-brand h1{
-    margin-top:18px;
-    font-size:24px;
-    font-weight:700;
+    margin-top:12px;
+    font-size:11px;
+    font-weight:500;
 }
 
 .portal-brand-subtitle{
     margin-top:6px;
-    font-size:13px;
+    font-size:11px;
     color:#94A3B8;
     letter-spacing:1px;
     text-transform:uppercase;
@@ -129,16 +130,17 @@ textarea{
 }
 
 .portal-nav{
-    display:flex;
-    flex-direction:column;
+    flex:1;
     gap:8px;
+    overflow-y:auto;
+    padding-right:4px;
 }
 
 .portal-nav a{
     display:flex;
     align-items:center;
     gap:14px;
-    padding:14px 16px;
+    padding:12px 14px;
     border-radius:14px;
     transition:.25s;
     color:#CBD5E1;
@@ -185,6 +187,7 @@ textarea{
     display:flex;
     align-items:center;
     gap:12px;
+    background:transparent;
 }
 .portal-user-avatar{
     width:48px;
@@ -231,7 +234,8 @@ textarea{
 ====================================================== */
 .portal-main{
     padding:30px;
-    overflow:auto;
+    overflow-y:auto;
+    overflow-x:hidden;
 }
 
 /* ======================================================
@@ -268,17 +272,19 @@ textarea{
 ====================================================== */
 .portal-kpi-grid{
     display:grid;
-    grid-template-columns:repeat(4,1fr);
-    gap:20px;
-    margin-bottom:24px;
+    grid-template-columns:repeat(5, minmax(100px,1fr));
+    gap:18px;
+    margin-bottom:8px;
 }
 
 .portal-kpi-card{
-    background:var(--surface);
-    border-radius:18px;
-    padding:24px;
-    border:1px solid var(--border);
-    box-shadow:var(--shadow);
+    background:#fff;
+    border:1px solid #E5E7EB;
+    border-radius:8px;
+    padding:12px;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
     transition:.25s;
 }
 
@@ -290,7 +296,7 @@ textarea{
     display:block;
     color:var(--text-light);
     font-size:14px;
-    margin-bottom:12px;
+    margin-bottom:8px;
 }
 
 .portal-kpi-card h2{
@@ -308,8 +314,12 @@ textarea{
     margin-bottom:24px;
 }
 .portal-layout-2col{
-    grid-template-columns:2fr 1fr;
-}
+    display:grid;
+    grid-template-columns:1.4fr 1fr;
+    gap:22px;
+    align-items:start;
+    margin-bottom:24px;
+} 
 
 /* ======================================================
    CARD
@@ -357,21 +367,15 @@ textarea{
 ====================================================== */
 
 .chart-box{
-
-    height:320px;
-
     position:relative;
-
+    height:300px;
+    width:100%;
 }
 
 .chart-box-small{
-
-    display:flex;
-
-    align-items:center;
-
-    justify-content:center;
-
+    height:300px;
+    max-width:340px;
+    margin:0 auto;
 }
 
 .chart-box-small canvas{
@@ -578,19 +582,16 @@ textarea{
         height:260px;
     }
 }
-/* ======================================================
-   HERO SECTION
-====================================================== */
+/* HERO SECTION */
 
 .portal-hero{
-    background:linear-gradient(135deg,#2563EB 0%,#1D4ED8 100%);
+    background:linear-gradient(135deg,#2563EB,#1D4ED8);
     border-radius:24px;
-    padding:40px;
-    margin-bottom:28px;
-    color:#fff;
+    padding:28px 32px;
+    min-height:180px;
     position:relative;
     overflow:hidden;
-    box-shadow:0 18px 40px rgba(37,99,235,.18);
+    margin-bottom:24px;
 }
 
 .portal-hero::after{
@@ -629,9 +630,7 @@ textarea{
     line-height:1.7;
 
 }
-/* ======================================================
-   REVIEW REPORTS
-====================================================== */
+/* REVIEW REPORTS */
 .portal-report-card{
     display:grid;
     grid-template-columns:2fr 1fr;
@@ -688,9 +687,7 @@ textarea{
     color:#991B1B;
 }
 
-/* ======================================================
-   REPORT INFORMATION GRID
-====================================================== */
+/* REPORT INFORMATION GRID */
 .portal-report-grid{
     display:grid;
     grid-template-columns:repeat(2,1fr);
@@ -723,9 +720,7 @@ textarea{
     word-break:break-word;
 }
 
-/* ======================================================
-   DESCRIPTION
-====================================================== */
+/* DESCRIPTION */
 .portal-report-description{
     background:#F8FAFC;
     border:1px solid var(--border);
@@ -746,9 +741,7 @@ textarea{
     color:var(--text);
 }
 
-/* ===========================
-   REVIEW REPORT MAP FIX
-=========================== */
+/* REVIEW REPORT MAP FIX */
 
 .portal-report-map-panel{
     display:flex;
@@ -784,9 +777,7 @@ textarea{
     text-align:center;
 }
 
-/* ======================================================
-   RESPONSIVE
-====================================================== */
+/* RESPONSIVE */
 
 @media (max-width:1200px){
     .portal-report-card{
@@ -809,9 +800,7 @@ textarea{
         height:260px;
     }
 }
-/* ======================================================
-   REVIEW GUIDE
-====================================================== */
+/* REVIEW GUIDE */
 
 .portal-review-guide{
     display:grid;
@@ -854,14 +843,11 @@ textarea{
     color:var(--text-light);
 
 }
-/* =========================================
-   SUMMARY CARDS
-========================================= */
-
+/* SUMMARY CARDS */
 .portal-summary-grid{
     display:grid;
-    grid-template-columns:repeat(4,1fr);
-    gap:18px;
+    grid-template-columns:repeat(auto-fit, minmax(240px,1fr));
+    gap:20px;
     margin:24px 0;
 }
 
@@ -869,31 +855,38 @@ textarea{
     background:#fff;
     border:1px solid #E5E7EB;
     border-radius:16px;
-    padding:18px;
+    padding:22px;
     text-align:center;
     transition:.25s;
+    min-width:0;
 }
+
 .portal-summary-card:hover{
     transform:translateY(-2px);
     box-shadow:0 8px 18px rgba(0,0,0,.06);
 }
+
 .portal-summary-card span{
     display:block;
     font-size:12px;
     text-transform:uppercase;
     letter-spacing:.6px;
     color:#64748B;
-    margin-bottom:8px;
+    margin-bottom:10px;
 }
+
 .portal-summary-card h2{
     margin:0;
-    font-size:34px;
+    font-size:30px;
     font-weight:700;
     color:#2563EB;
+    line-height:1.2;
+    white-space:normal;
+    word-break:normal;
+    overflow-wrap:break-word;
 }
-/* =====================================
-   FILTERS
-===================================== */
+
+/* FILTERS */
 
 .portal-filter-row{
     display:grid;
@@ -935,9 +928,7 @@ textarea{
     width:100%;
     height:48px;
 }
-/* =====================================
-   REVIEW NAVIGATION
-===================================== */
+/*REVIEW NAVIGATION */
 
 .portal-review-navigation{
     display:flex;
@@ -984,10 +975,7 @@ textarea{
     background:#1D4ED8;
 }
 
-/* ==========================================
-   HOTSPOT MAP PAGE
-========================================== */
-
+/* HOTSPOT MAP PAGE */
 .portal-map-wrapper{
     position:relative;
     margin-top:24px;
@@ -1078,9 +1066,7 @@ grid-template-columns:1fr;
 }
 
 }
-/* =====================================
-   HOTSPOT FILTERS ONLY
-===================================== */
+/* HOTSPOT FILTERS ONLY */
 .portal-hotspot-filter-row{
     display:grid;
     grid-template-columns:2fr 2fr 1fr 1fr 1fr 180px;
@@ -1169,9 +1155,10 @@ background:#DC2626;
 }
 
 @media(max-width:992px){
-.portal-leaflet-map{
-height:350px;
-}
+
+.portal-analytics-grid{
+        grid-template-columns:1fr;
+    }
 }
 
 @media(max-width:768px){
@@ -1210,15 +1197,8 @@ gap:6px;
 .portal-map-popup-link:hover{
     background:#1D4ED8;
 }
-/* =====================================
-   CREATE BRIEF
-===================================== */
+/* CREATE BRIEF */
 
-.portal-summary-grid{
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    gap:18px;
-}
 
 .portal-summary-card{
     background:#fff;
@@ -1238,16 +1218,20 @@ gap:6px;
     display:block;
     font-size:12px;
     text-transform:uppercase;
+    letter-spacing:.6px;
     color:#64748B;
     margin-bottom:10px;
-    letter-spacing:.5px;
 }
 
 .portal-summary-card h2{
     margin:0;
-    font-size:26px;
+    font-size:30px;
+    font-weight:700;
     color:#2563EB;
-    word-break:break-word;
+    line-height:1.2;
+    white-space:normal;
+    word-break:normal;
+    overflow-wrap:normal;
 }
 
 @media(max-width:900px){
@@ -1255,9 +1239,7 @@ gap:6px;
         grid-template-columns:1fr;
     }
 }
-/* =====================================
-   BRIEF DOCUMENT
-===================================== */
+/* BRIEF DOCUMENT*/
 
 .portal-brief-document{
     margin-top:28px;
@@ -1288,9 +1270,7 @@ gap:6px;
     font-size:22px;
     color:#0F172A;
 }
-/* =====================================
-   CREATE BRIEF TABLE
-===================================== */
+/* CREATE BRIEF TABLE */
 
 .portal-brief-table-wrap{
     margin-top:18px;
@@ -1339,9 +1319,7 @@ gap:6px;
 .portal-print-button:hover{
     background:#1D4ED8;
 }
-/* =====================================
-   PRIVACY & COMPLIANCE
-===================================== */
+/* PRIVACY & COMPLIANCE */
 
 .portal-module-row{
     transition:.25s;
@@ -1360,9 +1338,7 @@ gap:6px;
 .portal-table th{
     white-space:nowrap;
 }
-/* =====================================
-   SECURITY STATUS
-===================================== */
+/* SECURITY STATUS */
 
 .portal-summary-grid{
     margin-bottom:24px;
@@ -1396,4 +1372,129 @@ gap:6px;
 
 .portal-btn-secondary:hover{
     background:#DBEAFE;
+}
+/* ===== FINAL SIDEBAR FIX ===== */
+
+.portal-sidebar{
+    min-height:100vh !important;
+    height:100vh !important;
+    display:flex;
+    flex-direction:column;
+}
+
+.portal-nav{
+    flex:1;
+}
+
+.portal-user-card{
+    margin-top:auto;
+}
+
+.portal-sidebar-logout{
+    margin-top:15px;
+}
+/* Sidebar footer */
+.portal-user-card,
+.portal-user-card *{
+    background:transparent !important;
+}
+
+.portal-sidebar{
+    background:#111827 !important;
+}
+/* PRODUCTION COMPACT UI */
+
+.portal-main{
+    padding:22px;
+}
+
+.portal-card{
+    padding:22px;
+    border-radius:18px;
+}
+
+.portal-header{
+    padding:22px 28px;
+}
+
+.portal-header h2,
+.portal-header h1{
+    font-size:2rem;
+}
+
+.portal-header p{
+    font-size:15px;
+}
+
+.portal-chip{
+    padding:8px 14px;
+    font-size:13px;
+}
+
+.portal-summary-card{
+    padding:18px;
+}
+
+.portal-summary-card h2{
+    font-size:2rem;
+}
+
+.portal-btn-primary,
+.portal-btn-secondary{
+    padding:10px 18px;
+    font-size:14px;
+}
+
+.portal-table th,
+.portal-table td{
+    padding:14px 16px;
+    font-size:14px;
+}
+/* KPI ICONS */
+
+.portal-kpi-icon{
+    width:56px;
+    height:56px;
+    border-radius:14px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:24px;
+    flex-shrink:0;
+}
+
+.portal-kpi-icon.primary{
+    background:#DBEAFE;
+    color:#2563EB;
+}
+
+.portal-kpi-icon.warning{
+    background:#FEF3C7;
+    color:#D97706;
+}
+
+.portal-kpi-icon.success{
+    background:#DCFCE7;
+    color:#16A34A;
+}
+
+.portal-kpi-icon.danger{
+    background:#FEE2E2;
+    color:#DC2626;
+}
+
+.portal-kpi-icon.secondary{
+    background:#E5E7EB;
+    color:#4B5563;
+}
+/* DASHBOARD ANALYTICS */
+.portal-analytics-grid{
+    display:grid;
+    grid-template-columns:repeat(2, 1fr);
+    gap:20px;
+    margin-top:24px;
+}
+.portal-analytics-grid .portal-card{
+    padding:22px;
+    min-height:420px;
 }

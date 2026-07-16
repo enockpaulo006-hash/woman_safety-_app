@@ -54,6 +54,11 @@ const hotspotMaximizeButton = document.querySelector("[data-map-maximize]");
 
 if (hotspotDataNode && hotspotMapNode) {
   const reports = JSON.parse(hotspotDataNode.textContent || "[]");
+  try {
+    console.log(reports);
+} catch (e) {
+    console.error(e);
+}
   const hasLeaflet = typeof window.L !== "undefined";
 
   if (hotspotEmptyNode) {
@@ -77,7 +82,14 @@ if (hotspotDataNode && hotspotMapNode) {
       attribution: "&copy; OpenStreetMap contributors",
     }).addTo(map);
 
-    const markerLayer = window.L.layerGroup().addTo(map);
+   const markerLayer = window.L.markerClusterGroup({
+  showCoverageOnHover: false,
+  spiderfyOnMaxZoom: true,
+  disableClusteringAtZoom: 17,
+  maxClusterRadius: 50,
+});
+
+map.addLayer(markerLayer);
     const markerBounds = [];
     const createPinIcon = (timeBucket) =>
       window.L.divIcon({
@@ -88,11 +100,18 @@ if (hotspotDataNode && hotspotMapNode) {
         popupAnchor: [0, -42],
       });
 
-    reports.forEach((report) => {
-      const marker = window.L.marker([report.latitude, report.longitude], {
-        icon: createPinIcon(report.time_bucket),
-        title: `${report.reference} - ${report.area}`,
-      }).addTo(markerLayer);
+    const marker = window.L.marker([report.latitude, report.longitude], {
+    icon: createPinIcon(report.time_bucket),
+    title: `${report.reference} - ${report.area}`,
+}).addTo(markerLayer);
+
+window.L.circle([report.latitude, report.longitude], {
+    radius: 120,
+    color: "#DC2626",
+    weight: 2,
+    fillColor: "#EF4444",
+    fillOpacity: 0.18,
+}).addTo(markerLayer);
 
      marker.bindPopup(
        `<div class="portal-map-popup">` +
@@ -108,7 +127,7 @@ if (hotspotDataNode && hotspotMapNode) {
         map.setView([report.latitude, report.longitude], 17, { animate: true });
       });
       markerBounds.push([report.latitude, report.longitude]);
-    });
+    };
 
     if (markerBounds.length > 1) {
       const approvedBounds = window.L.latLngBounds(markerBounds);
@@ -142,7 +161,7 @@ if (hotspotDataNode && hotspotMapNode) {
 
     setTimeout(() => map.invalidateSize(), 100);
   }
-}
+
 
 const reportMiniMapNodes = document.querySelectorAll("[data-report-mini-map]");
 
@@ -211,18 +230,20 @@ if (reportMiniMapNodes.length && typeof window.L !== "undefined") {
       .openPopup();
 
     const mapBounds = window.L.latLngBounds([
-      [lat - 0.022, lng - 0.022],
-      [lat + 0.022, lng + 0.022],
-    ]);
-    map.setMaxBounds(mapBounds);
-    map.fitBounds(mapBounds, { padding: [24, 24], maxZoom: 15 });
-    node._portalMapBounds = mapBounds;
+    [lat - 0.01, lng - 0.01],
+    [lat + 0.01, lng + 0.01],
+   ]);
+
+   map.setView([lat, lng], 16);
+   map.setMaxBounds(mapBounds);
+
+   node._portalMapBounds = mapBounds;
     node._portalIncidentMarker = marker;
-    node._portalNearbyArea = nearbyArea;
+   node._portalNearbyArea = nearbyArea;
 
     const refreshMap = () => {
-      map.invalidateSize({ pan: false });
-      map.fitBounds(mapBounds, { padding: [24, 24], maxZoom: 15 });
+     map.invalidateSize();
+      map.setView([lat, lng], 16);
       marker.openPopup();
     };
 

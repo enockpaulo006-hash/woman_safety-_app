@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.gis',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'corsheaders',
     'django.contrib.staticfiles',
     'accounts.apps.AccountsConfig',
     'admin_portal.apps.AdminPortalConfig',
@@ -47,6 +48,9 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+
+    'corsheaders.middleware.CorsMiddleware',
+
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -154,3 +158,8 @@ GOOGLE_OAUTH_CLIENT_IDS = [
 ]
 if not GOOGLE_OAUTH_CLIENT_IDS:
     GOOGLE_OAUTH_CLIENT_IDS = DEFAULT_GOOGLE_OAUTH_CLIENT_IDS
+
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^http://localhost:\d+$",
+    r"^http://127\.0\.0\.1:\d+$",
+]

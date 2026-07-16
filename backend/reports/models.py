@@ -1,5 +1,4 @@
 import uuid
-
 from django.contrib.gis.db import models
 
 
@@ -123,3 +122,85 @@ class ReportStatusHistory(models.Model):
 
     def __str__(self) -> str:
         return f"{self.report.public_reference}: {self.previous_status} -> {self.new_status}"
+
+class EmergencySOS(models.Model):
+
+    class Status(models.TextChoices):
+        NEW = "NEW", "New"
+        ACKNOWLEDGED = "ACKNOWLEDGED", "Acknowledged"
+        OFFICER_ASSIGNED = "OFFICER_ASSIGNED", "Officer Assigned"
+        ON_THE_WAY = "ON_THE_WAY", "On The Way"
+        ARRIVED = "ARRIVED", "Arrived"
+        RESOLVED = "RESOLVED", "Resolved"
+        CANCELLED = "CANCELLED", "Cancelled"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    reference_number = models.CharField(max_length=30, unique=True)
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
+
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+    accuracy = models.FloatField(blank=True, null=True)
+
+    status = models.CharField(
+        max_length=30,
+        choices=Status.choices,
+        default=Status.NEW,
+    )
+
+    assigned_officer = models.CharField(
+        max_length=150,
+        blank=True,
+        null=True,
+    )
+
+    created_at = models.DateTimeField()
+    updated_at = models.DateTimeField()
+    resolved_at = models.DateTimeField(blank=True, null=True)
+
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "emergency_sos"
+        managed = False
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.reference_number
+
+
+class EmergencyStatusHistory(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    emergency = models.ForeignKey(
+        EmergencySOS,
+        on_delete=models.CASCADE,
+        db_column="emergency_id",
+        related_name="status_history",
+    )
+
+    previous_status = models.CharField(
+        max_length=30,
+        blank=True,
+        null=True,
+    )
+
+    new_status = models.CharField(max_length=30)
+
+    note = models.TextField(blank=True, null=True)
+
+    changed_by = models.CharField(
+        max_length=150,
+        blank=True,
+        null=True,
+    )
+
+    changed_at = models.DateTimeField()
+
+    class Meta:
+        db_table = "emergency_status_history"
+        managed = False
+        ordering = ["-changed_at"]
+
+    def __str__(self):
+        return f"{self.emergency.reference_number}: {self.new_status}"

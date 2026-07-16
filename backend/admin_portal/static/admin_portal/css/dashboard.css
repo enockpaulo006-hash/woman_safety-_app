@@ -199,9 +199,7 @@
     max-width:420px;
     margin:auto;
 }
-/* ===========================
-   KPI CARDS
-=========================== */
+/* KPI CARDS */
 
 .portal-kpi-grid{
     display:grid;
@@ -274,9 +272,7 @@
     font-weight:700;
     color:#111827;
 }
-/* ==========================
-   CHARTS
-========================== */
+/* CHARTS */
 
 .chart-box{
     position:relative;
@@ -320,7 +316,7 @@
     font-weight:700;
     letter-spacing:1px;
 }
-/* ===== STATUS BADGES ===== */
+/*STATUS BADGES*/
 
 .status-badge{
     display:inline-block;
@@ -344,7 +340,7 @@
     background:#FEE2E2;
     color:#991B1B;
 }
-/* ===== SIDEBAR ICONS ===== */
+/*SIDEBAR ICONS*/
 
 .portal-step-icon{
     width:42px;
@@ -358,7 +354,7 @@
     font-size:18px;
     flex-shrink:0;
 }
-/* ===== SIDEBAR BRAND ===== */
+/* SIDEBAR BRAND */
 
 .portal-brand{
     padding:18px;
@@ -380,9 +376,7 @@
     letter-spacing:1px;
     text-transform:uppercase;
 }
-/* ==========================
-   USER CARD
-========================== */
+/* USER CARD */
 
 .portal-user-card{
     margin-top:auto;
@@ -422,9 +416,7 @@
     color:#94A3B8;
     font-size:12px;
 }
-/* ==========================
-   SIDEBAR LOGOUT
-========================== */
+/* SIDEBAR LOGOUT */
 
 .portal-sidebar-logout{
     margin-top:14px;

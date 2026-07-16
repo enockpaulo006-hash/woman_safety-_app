@@ -21,10 +21,7 @@
 
 <div class="portal-shell">
 
-    <!-- ==========================================
-         SIDEBAR
-    =========================================== -->
-
+    <!-- SIDEBAR -->
     <aside class="portal-sidebar">
 
         <div class="portal-brand">
@@ -60,7 +57,7 @@
                     {% elif step.key == "moderation" %}
                       <i class="bi bi-clipboard2-check-fill"></i>
 
-                    {% elif step.key == "hotspots" %}
+                    {% elif step.key == "hotspot_map" %}
                         <i class="bi bi-pin-map-fill"></i>
 
                     {% elif step.key == "briefs" %}
@@ -68,6 +65,9 @@
 
                     {% elif step.key == "privacy" %}
                        <i class="bi bi-shield-lock-fill"></i>
+                       
+                    {% elif step.key == "emergency" %}
+                        <i class="bi bi-exclamation-triangle-fill"></i>
 
                     {% elif step.key == "settings" %}
                          <i class="bi bi-gear-fill"></i>
@@ -128,9 +128,7 @@
 
     </aside>
 
-    <!-- ==========================================
-         MAIN CONTENT
-    =========================================== -->
+    <!--MAIN CONTENT-->
 
     <main class="portal-main">
 {% if page_title %}

@@ -3,7 +3,8 @@ from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
+from .models import EmergencySOS
+from .serializers import EmergencySOSCreateSerializer
 from .models import IncidentCategory, LocationType, IncidentReport
 from .serializers import (
     IncidentCategorySerializer,
@@ -72,14 +73,38 @@ class IncidentReportCreateAPIView(APIView):
             status=status.HTTP_201_CREATED,
         )
 
+class EmergencySOSCreateAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = EmergencySOSCreateSerializer(
+            data=request.data,
+            context={"request": request},
+        )
+
+        serializer.is_valid(raise_exception=True)
+        emergency = serializer.save()
+
+        return Response(
+            {
+                "id": str(emergency.id),
+                "reference_number": emergency.reference_number,
+                "status": emergency.status,
+                "message": "Emergency SOS sent successfully.",
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
 
 class HotspotAPIView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request, *args, **kwargs):
         category = request.GET.get("category", "all")
+
         reports = IncidentReport.objects.select_related(
-            "category", "location_type"
+            "category",
+            "location_type",
         ).filter(status=IncidentReport.Status.APPROVED)
 
         if category != "all":
@@ -88,13 +113,20 @@ class HotspotAPIView(APIView):
         hotspot_data = []
         area_counts = {}
         category_counts = {}
-        time_counts = {"morning": 0, "afternoon": 0, "evening": 0, "night": 0}
+        time_counts = {
+            "morning": 0,
+            "afternoon": 0,
+            "evening": 0,
+            "night": 0,
+        }
 
         for report in reports[:500]:
             if not report.geom:
                 continue
+
             lat = float(report.geom.y)
             lng = float(report.geom.x)
+
             hour = report.occurred_at.hour
             if 5 <= hour < 12:
                 bucket = "morning"
@@ -104,14 +136,26 @@ class HotspotAPIView(APIView):
                 bucket = "evening"
             else:
                 bucket = "night"
+
             time_counts[bucket] += 1
 
             area = (
-         (report.approx_area_name or report.ward_or_district or "Unknown")
-         .strip()
-         .title()
-          )
+                report.ward_or_district
+                or report.approx_area_name
+                or "Unknown"
+            )
+
+            area = (
+                area.replace(" Municipal", "")
+                .strip()
+                .title()
+            )
+
+            if area.startswith("Gps"):
+                continue
+
             area_counts[area] = area_counts.get(area, 0) + 1
+
             category_counts[report.category.name] = (
                 category_counts.get(report.category.name, 0) + 1
             )
@@ -129,19 +173,30 @@ class HotspotAPIView(APIView):
                     "time_bucket": bucket,
                 }
             )
-        print(area_counts)
-        top_areas = sorted(area_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+
+        top_areas = sorted(
+            area_counts.items(),
+            key=lambda item: item[1],
+            reverse=True,
+        )[:4]
+
         top_categories = sorted(
-            category_counts.items(), key=lambda x: x[1], reverse=True
-        )[:10]
+            category_counts.items(),
+            key=lambda item: item[1],
+            reverse=True,
+        )[:4]
 
         return Response(
             {
                 "reports": hotspot_data,
                 "total": len(hotspot_data),
-                "top_areas": [{"label": label, "count": count} for label, count in top_areas],
+                "top_areas": [
+                    {"label": label, "count": count}
+                    for label, count in top_areas
+                ],
                 "top_categories": [
-                    {"label": label, "count": count} for label, count in top_categories
+                    {"label": label, "count": count}
+                    for label, count in top_categories
                 ],
                 "time_distribution": time_counts,
             }

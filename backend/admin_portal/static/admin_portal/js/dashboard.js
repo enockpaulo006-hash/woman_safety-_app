@@ -1,12 +1,14 @@
 document.addEventListener("DOMContentLoaded", () => {
 
-    const categoryData =
-        JSON.parse(document.getElementById("top-categories-data").textContent);
+    const categoryNode = document.getElementById("top-categories-data");
+    const timeNode = document.getElementById("time-chart-data");
 
-    const timeData =
-        JSON.parse(document.getElementById("time-chart-data").textContent);
+    if (!categoryNode || !timeNode) {
+        return;
+    }
 
-
+    const categoryData = JSON.parse(categoryNode.textContent);
+    const timeData = JSON.parse(timeNode.textContent);
     // ---------------- LINE CHART ----------------
 
     const trendCanvas = document.getElementById("incidentTrendChart");

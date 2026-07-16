@@ -19,6 +19,10 @@ import '../data/models/report_submission_result.dart';
 import '../data/services/offline_report_store.dart';
 import '../data/services/reporting_api_service.dart';
 import '../data/services/reporting_seed_data.dart';
+import '../data/services/reverse_geocoding_service.dart';
+
+import '../data/services/emergency_api_service.dart';
+import '../data/models/emergency_sos_result.dart';
 
 
 enum _AppSection {
@@ -73,6 +77,9 @@ class _ReportHomePageState extends State<ReportHomePage>
   bool _isLiveConnectionAvailable = false;
   bool _isSyncingPendingReports = false;
   bool _isPreparingSos = false;
+
+  String? _emergencyReference;
+  String _emergencyStatus = "Waiting for Emergency SOS...";
 
   Map<String, dynamic>? _cachedHotspots;
 
@@ -419,7 +426,7 @@ Future<Map<String, dynamic>> _getHotspotsData() async {
         _capturedLongitude = position.longitude;
         _isGettingLocation = false;
       });
-      _showSnack(strings.text('locationCaptured'));
+      _showSuccessSnack(strings.text('locationCaptured'));
     } catch (error) {
       if (!mounted) {
         return;
@@ -430,11 +437,11 @@ Future<Map<String, dynamic>> _getHotspotsData() async {
       });
 
       if (error is _LocationCaptureException) {
-        _showSnack(error.message);
+        _showErrorSnack(error.message);
         return;
       }
 
-      _showSnack(strings.text('locationCaptureFailed'));
+      _showErrorSnack(strings.text('locationCaptureFailed'));
     }
   }
 
@@ -477,34 +484,37 @@ Future<Map<String, dynamic>> _getHotspotsData() async {
     }
 
     try {
-      final message = _buildSosMessage(position);
-      await Clipboard.setData(ClipboardData(text: message));
+       if (position == null) {
+         throw Exception("Location is required to send an emergency SOS.");
+  }
 
-      if (!mounted) {
-        return;
-      }
+      final result = await EmergencyApiService().sendEmergencySOS(
+        latitude: position.latitude,
+        longitude: position.longitude,
+  );
 
-      setState(() {
-        _isPreparingSos = false;
-      });
+       setState(() {
+        _emergencyReference = result.referenceNumber;
+        _emergencyStatus = result.status;
+       _isPreparingSos = false;
+  });
 
-      _showSnack(
-        position == null
-            ? strings.text('sosCopiedWithoutLocation')
-            : strings.text('sosCopiedWithLocation'),
-      );
-
-      await _showSosReadySheet(message: message, hasLocation: position != null);
-    } catch (_) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _isPreparingSos = false;
-      });
-      _showSnack(strings.text('sosActivationFailed'));
+     if (!mounted) {
+       return;
     }
+
+      _showSuccessSnack("Emergency SOS sent successfully.");
+    } catch (_) {
+  if (!mounted) {
+    return;
+  }
+
+  setState(() {
+    _isPreparingSos = false;
+  });
+
+  _showErrorSnack(strings.text('sosActivationFailed'));
+}
   }
 
   Future<void> _showSosReadySheet({
@@ -650,24 +660,26 @@ Future<Map<String, dynamic>> _getHotspotsData() async {
     }
 
     if (_selectedDateTime == null) {
-      _showSnack(strings.text('incidentTimeRequired'));
+      _showErrorSnack(strings.text('incidentTimeRequired'));
       return;
     }
 
     if (_selectedCategory == null) {
-      _showSnack(strings.text('taxonomyWait'));
+      _showErrorSnack(strings.text('taxonomyWait'));
       return;
     }
 
     if (_capturedLatitude == null || _capturedLongitude == null) {
-      _showSnack(strings.text('locationRequired'));
+      _showErrorSnack(strings.text('locationRequired'));
       return;
     }
 
     if (!_consentAcknowledged) {
-      _showSnack(strings.text('consentRequired'));
-      return;
-    }
+  _showErrorSnack(
+    "Please confirm to ensure your privacy. This report must be submitted anonymously.",
+  );
+  return;
+}
 
     setState(() {
       _isSubmitting = true;
@@ -686,7 +698,7 @@ Future<Map<String, dynamic>> _getHotspotsData() async {
           _lastSubmission = result;
           _isSubmitting = false;
         });
-        _showSnack(result.message);
+        _showSuccessSnack(result.message);
         _resetForm();
         return;
       }
@@ -710,7 +722,7 @@ Future<Map<String, dynamic>> _getHotspotsData() async {
         _lastSubmission = result;
         _isSubmitting = false;
       });
-      _showSnack(result.message);
+      _showSuccessSnack(result.message);
       _resetForm();
     } catch (error) {
       if (!mounted) {
@@ -729,7 +741,7 @@ Future<Map<String, dynamic>> _getHotspotsData() async {
           _isLiveConnectionAvailable = false;
           _usingOfflineTaxonomies = true;
         });
-        _showSnack(result.message);
+        _showSuccessSnack(result.message);
         _resetForm();
         return;
       }
@@ -737,7 +749,7 @@ Future<Map<String, dynamic>> _getHotspotsData() async {
       setState(() {
         _isSubmitting = false;
       });
-      _showSnack(error.toString());
+      _showErrorSnack(error.toString());
     }
   }
 
@@ -789,7 +801,7 @@ Future<Map<String, dynamic>> _getHotspotsData() async {
         });
       }
       if (showSnack) {
-        _showSnack(_strings.text('noSavedOfflineReports'));
+        _showErrorSnack(_strings.text('noSavedOfflineReports'));
       }
       return;
     }
@@ -863,16 +875,16 @@ Future<Map<String, dynamic>> _getHotspotsData() async {
       }
 
       if (syncedCount > 0 && remainingReports.isEmpty) {
-        _showSnack(_strings.text('syncComplete'));
+        _showSuccessSnack(_strings.text('syncComplete'));
       } else if (syncedCount > 0) {
-        _showSnack(
+        _showErrorSnack(
           _strings.text('syncPartial', {
             'synced': syncedCount.toString(),
             'remaining': remainingReports.length.toString(),
           }),
         );
       } else {
-        _showSnack(_strings.text('syncWaiting'));
+        _showErrorSnack(_strings.text('syncWaiting'));
       }
     } catch (_) {
       if (!mounted) {
@@ -885,7 +897,7 @@ Future<Map<String, dynamic>> _getHotspotsData() async {
       });
 
       if (showSnack) {
-        _showSnack(_strings.text('syncOfflineLater'));
+        _showErrorSnack(_strings.text('syncOfflineLater'));
       }
     }
   }
@@ -904,12 +916,73 @@ Future<Map<String, dynamic>> _getHotspotsData() async {
     });
   }
 
-  void _showSnack(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
-  }
+void _showErrorSnack(String message) {
+  ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Row(
+        children: [
+          const Icon(
+            Icons.error_outline,
+            color: Colors.white,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+      backgroundColor: Colors.red.shade700,
+      behavior: SnackBarBehavior.floating,
+      margin: const EdgeInsets.all(16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+      ),
+      duration: const Duration(seconds: 4),
+    ),
+  );
+}
+
+void _showSuccessSnack(String message) {
+  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Row(
+        children: [
+          const Icon(
+            Icons.check_circle,
+            color: Colors.white,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+      backgroundColor: Colors.green.shade600,
+      behavior: SnackBarBehavior.floating,
+      margin: const EdgeInsets.all(16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+      ),
+      duration: const Duration(seconds: 3),
+    ),
+  );
+}
   Future<void> _handleBackendUrlSaved(String value) async {
     try {
       await _settingsController.setBackendUrl(value);
@@ -917,14 +990,14 @@ Future<Map<String, dynamic>> _getHotspotsData() async {
         return;
       }
 
-      _showSnack(_strings.text('backendUrlSaved'));
+      _showSuccessSnack(_strings.text('backendUrlSaved'));
       await _loadTaxonomies();
     } on FormatException {
       if (!mounted) {
         return;
       }
 
-      _showSnack(_strings.text('backendUrlInvalid'));
+      _showErrorSnack(_strings.text('backendUrlInvalid'));
     }
   }
 
@@ -1433,13 +1506,7 @@ if (topAreas.isNotEmpty)
         _SosActionCard(
           isPreparing: _isPreparingSos,
           onActivate: _activateSosSupport,
-          onOpenReportForm: _openReportForm,
-          onOpenGuide: () => _openSection(_AppSection.guide),
-        ),
-        const SizedBox(height: 18),
-        _InfoCard(
-          title: strings.text('emergencyGuidance'),
-          body: strings.text('emergencyGuidanceBody'),
+          emergencyStatus: _emergencyStatus,
         ),
       ],
     );
@@ -2502,130 +2569,215 @@ class _ThemeColorDot extends StatelessWidget {
 
 class _SosActionCard extends StatelessWidget {
   const _SosActionCard({
-    required this.isPreparing,
-    required this.onActivate,
-    required this.onOpenReportForm,
-    required this.onOpenGuide,
-  });
+  required this.isPreparing,
+  required this.onActivate,
+  required this.emergencyStatus,
+});
 
   final bool isPreparing;
   final Future<void> Function() onActivate;
-  final Future<void> Function() onOpenReportForm;
-  final VoidCallback onOpenGuide;
+  final String emergencyStatus;
 
   @override
   Widget build(BuildContext context) {
-    final strings = AppSettingsScope.stringsOf(context);
-
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFFE5484D), Color(0xFFFF8B5E)],
+          colors: [
+            Color(0xFFD32F2F),
+            Color(0xFFE53935),
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(30),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x44E5484D),
-            blurRadius: 26,
-            offset: Offset(0, 16),
+            color: Color(0x44D32F2F),
+            blurRadius: 25,
+            offset: Offset(0, 14),
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(22),
+        padding: const EdgeInsets.all(24),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Container(
-              width: 54,
-              height: 54,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
-              ),
-              child: const Icon(
-                Icons.notification_important_rounded,
-                color: Colors.white,
-                size: 28,
-              ),
+            const Icon(
+              Icons.sos,
+              color: Colors.white,
+              size: 70,
             ),
+
             const SizedBox(height: 18),
-            Text(
-              strings.text('sosActionTitle'),
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+
+            const Text(
+              "Emergency SOS",
+              textAlign: TextAlign.center,
+              style: TextStyle(
                 color: Colors.white,
-                fontWeight: FontWeight.w900,
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              strings.text('sosActionBody'),
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.white.withValues(alpha: 0.92),
+
+            const SizedBox(height: 12),
+
+            const Text(
+              "If you are in immediate danger, press the button below. "
+              "Your live location will be sent immediately to the Police Control Room.",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 15,
                 height: 1.5,
               ),
             ),
-            const SizedBox(height: 18),
+
+            const SizedBox(height: 30),
+
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
                 onPressed: isPreparing ? null : onActivate,
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.white,
-                  disabledBackgroundColor: Colors.white.withValues(alpha: 0.7),
-                  foregroundColor: const Color(0xFFD63D45),
-                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  foregroundColor: const Color(0xFFD32F2F),
+                  padding: const EdgeInsets.symmetric(vertical: 20),
                 ),
                 icon: isPreparing
                     ? const SizedBox(
-                        width: 18,
-                        height: 18,
+                        width: 22,
+                        height: 22,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Color(0xFFD63D45),
+                          color: Color(0xFFD32F2F),
                         ),
                       )
-                    : const Icon(Icons.copy_rounded),
-                label: Text(
-                  strings.text('sosPrimaryAction'),
-                  style: const TextStyle(fontWeight: FontWeight.w900),
+                    : const Icon(Icons.warning_rounded),
+                label: const Text(
+                  "SEND EMERGENCY SOS",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                OutlinedButton.icon(
-                  onPressed: onOpenReportForm,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    backgroundColor: Colors.white.withValues(alpha: 0.08),
-                    side: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.24),
-                    ),
-                  ),
-                  icon: const Icon(Icons.edit_note_rounded),
-                  label: Text(strings.text('openReportForm')),
-                ),
-                OutlinedButton.icon(
-                  onPressed: onOpenGuide,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    backgroundColor: Colors.white.withValues(alpha: 0.08),
-                    side: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.24),
-                    ),
-                  ),
-                  icon: const Icon(Icons.shield_outlined),
-                  label: Text(strings.text('drawerGuide')),
-                ),
-              ],
+const SizedBox(height: 30),
+
+const Divider(
+  color: Colors.white38,
+),
+
+const SizedBox(height: 20),
+
+Align(
+  alignment: Alignment.centerLeft,
+  child: Text(
+    "Police Response",
+    style: TextStyle(
+      color: Colors.white,
+      fontSize: 18,
+      fontWeight: FontWeight.bold,
+    ),
+  ),
+),
+
+const SizedBox(height: 18),
+
+Container(
+  width: double.infinity,
+  padding: const EdgeInsets.all(16),
+  decoration: BoxDecoration(
+    color: Colors.white.withValues(alpha: 0.15),
+    borderRadius: BorderRadius.circular(18),
+  ),
+  child: Column(
+    children: [
+      Row(
+        children: [
+          const Icon(
+            Icons.hourglass_top,
+            color: Colors.white,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+                emergencyStatus,
+              style: const TextStyle(
+                color: Colors.white,
+              ),
             ),
+          ),
+        ],
+      ),
+
+      const SizedBox(height: 12),
+
+      const Row(
+        children: [
+          Icon(
+            Icons.person_outline,
+            color: Colors.white54,
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              "Officer Assignment",
+              style: TextStyle(
+                color: Colors.white54,
+              ),
+            ),
+          ),
+        ],
+      ),
+
+      const SizedBox(height: 12),
+
+      const Row(
+        children: [
+          Icon(
+            Icons.local_police_outlined,
+            color: Colors.white54,
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              "Police On The Way",
+              style: TextStyle(
+                color: Colors.white54,
+              ),
+            ),
+          ),
+        ],
+      ),
+
+      const SizedBox(height: 12),
+
+      const Row(
+        children: [
+          Icon(
+            Icons.check_circle_outline,
+            color: Colors.white54,
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              "Emergency Resolved",
+              style: TextStyle(
+                color: Colors.white54,
+              ),
+            ),
+          ),
+        ],
+      ),
+    ],
+  ),
+),
+
+
           ],
         ),
       ),
@@ -3684,6 +3836,34 @@ class _OfflineStatusCard extends StatelessWidget {
                   : onSyncPendingReports,
               child: Text(buttonLabel),
             ),
+
+            const SizedBox(height: 24),
+            const Divider(color: Colors.white30),
+            const SizedBox(height: 20),
+
+            Text(
+              "Police Response",
+              style: TextStyle(
+                color: Colors.white,
+               fontSize: 18,
+               fontWeight: FontWeight.bold,
+               ),
+              ),
+
+              const SizedBox(height: 16),
+
+              Row(
+                children: const [
+                 Icon(Icons.radio_button_checked,
+                   color: Colors.white),
+                 SizedBox(width: 10),
+                 Text(
+                   "Waiting for emergency request...",
+                  style: TextStyle(color: Colors.white),
+             ),
+            ],
+          ),
+
           ],
         ),
       ),
@@ -4033,15 +4213,21 @@ class _ReportFormCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: descriptionController,
-                minLines: 4,
-                maxLines: 6,
-                decoration: InputDecoration(
-                  labelText: strings.text('whatHappened'),
-                  hintText: strings.text('whatHappenedHint'),
-                ),
-              ),
+             TextFormField(
+  controller: descriptionController,
+  minLines: 4,
+  maxLines: 6,
+  decoration: InputDecoration(
+    labelText: strings.text('whatHappened'),
+    hintText: strings.text('whatHappenedHint'),
+  ),
+  validator: (value) {
+    if (value == null || value.trim().isEmpty) {
+      return "Please describe what happened.";
+    }
+    return null;
+  },
+),
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(14),
@@ -4055,17 +4241,37 @@ class _ReportFormCard extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Checkbox(
-                      value: consentAcknowledged,
-                      onChanged: onConsentChanged,
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 10),
-                        child: Text(strings.text('consentText')),
-                      ),
-                    ),
+Checkbox(
+  value: consentAcknowledged,
+  onChanged: onConsentChanged,
+),
+const SizedBox(width: 6),
+Expanded(
+  child: Padding(
+    padding: const EdgeInsets.only(top: 10),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: const [
+        Text(
+          "Submit this report anonymously.",
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 15,
+          ),
+        ),
+        SizedBox(height: 4),
+        Text(
+          "Your identity will remain confidential. Personal information is not shared with police, researchers, or partner organizations.",
+          style: TextStyle(
+            fontSize: 13,
+            color: Color.fromARGB(255, 5, 240, 13),
+            height: 1.4,
+          ),
+        ),
+      ],
+    ),
+  ),
+),
                   ],
                 ),
               ),

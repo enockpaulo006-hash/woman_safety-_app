@@ -5,8 +5,13 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from .location_enrichment import resolve_location_context
-from .models import IncidentCategory, IncidentReport, LocationType
-
+from .models import (
+    IncidentCategory,
+    LocationType,
+    IncidentReport,
+    EmergencySOS,
+    EmergencyStatusHistory,
+)
 
 class IncidentCategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -113,3 +118,44 @@ class IncidentReportCreateSerializer(serializers.Serializer):
             updated_at=now,
         )
         return report
+
+class EmergencySOSCreateSerializer(serializers.Serializer):
+    latitude = serializers.FloatField()
+    longitude = serializers.FloatField()
+    accuracy = serializers.FloatField(required=False, allow_null=True)
+    phone_number = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        max_length=20,
+    )
+    def create(self, validated_data):
+        request = self.context["request"]
+        now = timezone.now()
+        reference_number = (
+            f"SOS-{now:%Y%m%d}-"
+            f"{uuid.uuid4().hex[:6].upper()}"
+        )
+        emergency = EmergencySOS.objects.create(
+            id=uuid.uuid4(),
+            reference_number=reference_number,
+            victim_id=request.user.id,
+            phone_number=validated_data.get("phone_number"),
+            latitude=validated_data["latitude"],
+            longitude=validated_data["longitude"],
+            accuracy=validated_data.get("accuracy"),
+            status=EmergencySOS.Status.NEW,
+            created_at=now,
+            updated_at=now,
+            is_active=True,
+        )
+        EmergencyStatusHistory.objects.create(
+            id=uuid.uuid4(),
+            emergency=emergency,
+            previous_status=None,
+            new_status=EmergencySOS.Status.NEW,
+            note="Emergency SOS created.",
+            changed_by=request.user.username,
+            changed_at=now,
+        )
+        return emergency

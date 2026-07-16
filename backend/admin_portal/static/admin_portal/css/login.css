@@ -1,0 +1,238 @@
+/*LOGIN PAGE */
+body.portal-auth-page{
+    margin:0;
+    padding:0;
+    min-height:100vh;
+    background:#F4F7FC;
+    font-family:Inter, "Segoe UI", sans-serif;
+}
+
+.portal-auth-shell{
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    padding:30px;
+}
+
+.portal-auth-card{
+    width:100%;
+    max-width:460px;
+    background:#FFFFFF;
+    border-radius:24px;
+    padding:42px;
+    box-shadow:0 20px 50px rgba(15,23,42,.10);
+    border:1px solid #E5E7EB;
+}
+
+/* BRANDING */
+.portal-brand{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+    margin-bottom:30px;
+}
+
+.portal-brand-logo{
+    width:70px;
+    height:70px;
+    margin-bottom:16px;
+}
+
+.portal-brand h1{
+    margin:0;
+    font-size:28px;
+    font-weight:700;
+    color:#111827;
+}
+
+.portal-brand p{
+    margin-top:8px;
+    font-size:15px;
+    color:#64748B;
+}
+
+.portal-card-label{
+    display:inline-block;
+    width:100%;
+    text-align:center;
+    margin:0 0 10px;
+    font-size:12px;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    color:#2563EB;
+}
+
+.portal-auth-card h2{
+    margin:0;
+    text-align:center;
+    font-size:32px;
+    font-weight:700;
+    color:#111827;
+}
+
+.portal-auth-copy{
+    text-align:center;
+    margin:14px 0 32px;
+    font-size:15px;
+    line-height:1.6;
+    color:#64748B;
+}
+
+/* LOGIN FORM */
+.portal-auth-form{
+    display:flex;
+    flex-direction:column;
+    gap:22px;
+}
+
+.portal-form-grid{
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+}
+
+.portal-form-field{
+    display:flex;
+    flex-direction:column;
+}
+
+.portal-form-field label{
+    margin-bottom:8px;
+    font-size:14px;
+    font-weight:600;
+    color:#374151;
+}
+
+.portal-form-field input{
+    width:100%;
+    padding:14px 16px;
+    border:1px solid #D1D5DB;
+    border-radius:14px;
+    background:#F9FAFB;
+    font-size:15px;
+    transition:.25s ease;
+    box-sizing:border-box;
+}
+
+.portal-form-field input:focus{
+    outline:none;
+    border-color:#2563EB;
+    background:#FFFFFF;
+    box-shadow:0 0 0 4px rgba(37,99,235,.12);
+}
+
+.portal-field-error{
+    margin-top:6px;
+    color:#DC2626;
+    font-size:13px;
+}
+
+/* LOGIN BUTTON & FOOTER*/
+.portal-auth-submit{
+    width:100%;
+    padding:15px;
+    border:none;
+    border-radius:14px;
+    background:#2563EB;
+    color:#FFFFFF;
+    font-size:16px;
+    font-weight:600;
+    cursor:pointer;
+    transition:.25s ease;
+}
+
+.portal-auth-submit:hover{
+    background:#1D4ED8;
+    transform:translateY(-2px);
+    box-shadow:0 12px 24px rgba(37,99,235,.25);
+}
+
+.portal-auth-submit:active{
+    transform:translateY(0);
+}
+
+.portal-form-alert{
+    padding:14px 16px;
+    border-radius:12px;
+    background:#FEF2F2;
+    border:1px solid #FECACA;
+    color:#B91C1C;
+    font-size:14px;
+}
+
+.portal-auth-footer{
+    margin-top:24px;
+    text-align:center;
+    border-top:1px solid #E5E7EB;
+    padding-top:18px;
+}
+
+.portal-auth-footer p{
+    margin:4px 0;
+    color:#6B7280;
+    font-size:13px;
+}
+
+/* LOGIN OPTIONS */
+.portal-auth-options{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:-6px;
+}
+
+.portal-checkbox{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    cursor:pointer;
+    font-size:14px;
+    color:#475569;
+}
+
+.portal-checkbox input{
+    width:16px;
+    height:16px;
+    accent-color:#2563EB;
+}
+
+/*ANIMATION */
+.portal-auth-card{
+    animation:portalFade .45s ease;
+}
+
+@keyframes portalFade{
+
+    from{
+        opacity:0;
+        transform:translateY(18px);
+    }
+
+    to{
+        opacity:1;
+        transform:translateY(0);
+    }
+
+}
+
+/* RESPONSIVE*/
+@media (max-width:768px){
+    .portal-auth-card{
+        padding:30px 24px;
+        border-radius:18px;
+    }
+    .portal-brand-logo{
+        width:58px;
+        height:58px;
+    }
+    .portal-brand h1{
+        font-size:24px;
+    }
+    .portal-auth-card h2{
+        font-size:28px;
+    }
+
+}

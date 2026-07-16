@@ -1,0 +1,121 @@
+{% extends "admin_portal/base.html" %}
+
+{% block page_actions %}
+
+<span class="portal-chip portal-chip-strong">
+    {{ active_count }} Active
+</span>
+
+<span class="portal-chip">
+    {{ assigned_count }} Assigned
+</span>
+
+<span class="portal-chip">
+    {{ on_the_way_count }} On the Way
+</span>
+
+<span class="portal-chip">
+    {{ resolved_today }} Resolved Today
+</span>
+
+{% endblock %}
+
+{% block content %}
+
+<section class="portal-hero">
+    <div class="portal-hero-content">
+        <span class="portal-card-label">
+            POLICE CONTROL ROOM
+        </span>
+
+        <h1>Emergency SOS Dashboard</h1>
+
+        <p>
+            View and manage emergency SOS requests in real time.
+        </p>
+    </div>
+</section>
+
+<section class="portal-kpi-grid">
+
+    <article class="portal-kpi-card">
+        <div>
+            <span>Active SOS</span>
+            <h2>{{ active_count }}</h2>
+        </div>
+    </article>
+
+    <article class="portal-kpi-card">
+        <div>
+            <span>Assigned</span>
+            <h2>{{ assigned_count }}</h2>
+        </div>
+    </article>
+
+    <article class="portal-kpi-card">
+        <div>
+            <span>On The Way</span>
+            <h2>{{ on_the_way_count }}</h2>
+        </div>
+    </article>
+
+    <article class="portal-kpi-card">
+        <div>
+            <span>Resolved Today</span>
+            <h2>{{ resolved_today }}</h2>
+        </div>
+    </article>
+
+</section>
+
+<article class="portal-card">
+
+    <div class="portal-section-heading">
+        <div>
+            <p class="portal-card-label">
+                Live Emergency Requests
+            </p>
+
+            <h3>Emergency SOS List</h3>
+        </div>
+    </div>
+
+    <table class="portal-table">
+
+        <thead>
+            <tr>
+                <th>Reference</th>
+                <th>Status</th>
+                <th>Phone</th>
+                <th>Time</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+        {% for emergency in emergencies %}
+
+        <tr>
+            <td>{{ emergency.reference_number }}</td>
+            <td>{{ emergency.status }}</td>
+            <td>{{ emergency.phone_number|default:"-" }}</td>
+            <td>{{ emergency.created_at }}</td>
+        </tr>
+
+        {% empty %}
+
+        <tr>
+            <td colspan="4">
+                No emergency SOS requests.
+            </td>
+        </tr>
+
+        {% endfor %}
+
+        </tbody>
+
+    </table>
+
+</article>
+
+{% endblock %}

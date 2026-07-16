@@ -1,6 +1,6 @@
 import csv
 from datetime import date, timedelta
-
+from urllib import request
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth import get_user_model
@@ -17,7 +17,13 @@ from django.views.decorators.http import require_POST
 from .decorators import portal_access_required
 from .forms import PortalAuthenticationForm
 from .roles import PortalRole, portal_context, role_required
-from reports.models import IncidentCategory, IncidentReport, LocationType, ReportStatusHistory
+from reports.models import (
+    IncidentCategory,
+    IncidentReport,
+    LocationType,
+    ReportStatusHistory,
+    EmergencySOS,
+)
 
 User = get_user_model()
 
@@ -174,15 +180,26 @@ def dashboard_view(request):
         .order_by("-reported_at")[:6]
     )
     approved_rows = [
-        {
-            "area": report.approx_area_name or report.ward_or_district or "Area context missing",
-            "category": report.category.name,
-            "location_type": report.location_type.name,
-            "time_bucket": _time_bucket(report.occurred_at),
-        }
-        for report in approved_reports[:250]
-    ]
-    top_areas = _top_items([row["area"] for row in approved_rows], limit=4)
+    {
+        "area": (
+            report.ward_or_district.strip().title()
+            if report.ward_or_district
+            else (
+                report.approx_area_name.strip().title()
+                if report.approx_area_name
+                else "Area context missing"
+            )
+        ),
+        "category": report.category.name,
+        "location_type": report.location_type.name,
+        "time_bucket": _time_bucket(report.occurred_at),
+    }
+    for report in approved_reports[:250]
+]
+    top_areas = _top_items(
+    [row["area"] for row in approved_rows],
+    limit=4,
+)
     top_categories = _top_items([row["category"] for row in approved_rows], limit=4)
     top_location_types = _top_items([row["location_type"] for row in approved_rows], limit=4)
     time_counts = {
@@ -356,6 +373,7 @@ def update_report_status_view(request, report_id):
             previous_status=previous_status,
             new_status=new_status,
             moderation_note=moderation_note,
+            changed_by_admin=request.user,
             changed_at=timezone.now(),
         )
     except DatabaseError:
@@ -413,17 +431,25 @@ def hotspot_map_view(request):
             continue
 
         hotspot_reports.append(
-            {
-                "reference": report.public_reference,
-                "category": report.category.name,
-                "location_type": report.location_type.name,
-                "area": report.approx_area_name or report.ward_or_district or "Area context missing",
-                "occurred_at": report.occurred_at.strftime("%b %d, %Y %H:%M"),
-                "latitude": float(report.geom.y),
-                "longitude": float(report.geom.x),
-                "time_bucket": bucket,
-            }
-        )
+    {
+        "reference": report.public_reference,
+        "category": report.category.name,
+        "location_type": report.location_type.name,
+        "area": (
+            report.ward_or_district.strip().title()
+            if report.ward_or_district
+            else (
+                report.approx_area_name.strip().title()
+                if report.approx_area_name
+                else "Area context missing"
+            )
+        ),
+        "occurred_at": report.occurred_at.strftime("%b %d, %Y %H:%M"),
+        "latitude": float(report.geom.y),
+        "longitude": float(report.geom.x),
+        "time_bucket": bucket,
+    }
+)
 
     time_counts = {
         "morning": 0,
@@ -493,7 +519,15 @@ def _build_brief_context(request):
                 "reference": report.public_reference,
                 "category": report.category.name,
                 "location_type": report.location_type.name,
-                "area": report.approx_area_name or report.ward_or_district or "Area context missing",
+                "area": (
+    report.ward_or_district.strip().title()
+    if report.ward_or_district
+    else (
+        report.approx_area_name.strip().title()
+        if report.approx_area_name
+        else "Area context missing"
+    )
+),
                 "occurred_at": report.occurred_at,
             }
         )
@@ -666,14 +700,14 @@ def settings_view(request):
         "location_type_count": location_types.count(),
         "report_count": IncidentReport.objects.count(),
     }
-
     return render(
-        request,
-        "admin_portal/settings.html",
-        context,
-    )
-    
-    @portal_access_required
+    request,
+    "admin_portal/settings.html",
+    context,
+)
+
+
+@portal_access_required
 def category_list_view(request):
 
     categories = IncidentCategory.objects.order_by(
@@ -686,13 +720,53 @@ def category_list_view(request):
         "admin_portal/categories.html",
         {
             **portal_context(request, "settings"),
-
             "page_title": "Incident Categories",
-
             "page_summary": "Manage incident categories.",
-
             "categories": categories,
-
             "total_categories": categories.count(),
         },
     )
+    
+
+@portal_access_required
+@role_required(PortalRole.ADMIN, PortalRole.POLICE_PARTNER)
+def emergency_dashboard_view(request):
+
+    emergencies = EmergencySOS.objects.filter(
+        is_active=True
+    ).order_by("-created_at")
+
+    active_count = emergencies.exclude(
+        status=EmergencySOS.Status.RESOLVED
+    ).count()
+
+    assigned_count = emergencies.filter(
+        status=EmergencySOS.Status.OFFICER_ASSIGNED
+    ).count()
+
+    on_the_way_count = emergencies.filter(
+        status=EmergencySOS.Status.ON_THE_WAY
+    ).count()
+
+    resolved_today = EmergencySOS.objects.filter(
+        status=EmergencySOS.Status.RESOLVED,
+        resolved_at__date=timezone.localdate(),
+    ).count()
+
+    return render(
+        request,
+        "admin_portal/emergency_dashboard.html",
+        {
+            **portal_context(request, "emergency"),
+            "page_title": "Emergency SOS",
+            "page_kicker": "Police Control Room",
+            "page_summary": (
+                "View all emergency SOS requests and respond quickly."
+            ),
+            "emergencies": emergencies,
+            "active_count": active_count,
+            "assigned_count": assigned_count,
+            "on_the_way_count": on_the_way_count,
+            "resolved_today": resolved_today,
+        },
+    )  

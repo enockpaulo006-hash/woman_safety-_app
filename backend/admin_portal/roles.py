@@ -42,6 +42,17 @@ WORKFLOW_STEPS = [
         "roles": {PortalRole.ADMIN, PortalRole.MODERATOR},
     },
     {
+    "key": "emergency",
+    "label": "Emergency",
+    "title": "Emergency SOS",
+    "description": "Monitor and respond to emergency SOS requests.",
+    "url_name": "admin-emergency",
+    "roles": {
+        PortalRole.ADMIN,
+        PortalRole.POLICE_PARTNER,
+        },
+    },
+    {
         "key": "hotspot_map",
         "label": "Map",
         "title": "Map hotspots",
@@ -84,8 +95,17 @@ WORKFLOW_STEPS = [
             PortalRole.RESEARCHER,
         },
     },
+    {
+    "key": "settings",
+    "label": "Settings",
+    "title": "Settings",
+    "description": "Manage users, categories, location types and system settings.",
+    "url_name": "admin-settings",
+    "roles": {
+        PortalRole.ADMIN,
+    },
+},
 ]
-
 
 def user_portal_roles(user):
     if not user.is_authenticated:
@@ -161,8 +181,5 @@ def portal_context(request, page_name):
         "next_step": next_step,
         "portal_roles": roles,
         "portal_role_labels": [ROLE_LABELS[role] for role in sorted(roles)],
-        "key": "settings",
-         "title": "Settings",
-         "url_name": "admin-settings",
-
+        
     }

@@ -1,0 +1,262 @@
+{% extends "admin_portal/base.html" %}
+
+{% block content %}
+
+<div class="emergency-detail-grid">
+
+<div class="portal-card">
+
+<div class="portal-card-header">
+<h2>Emergency Information</h2>
+</div>
+
+<div class="portal-card-body">
+
+<div class="detail-list">
+
+<div class="detail-row">
+<span>Reference</span>
+<strong>{{ emergency.reference_number }}</strong>
+</div>
+
+<div class="detail-row">
+<span>Status</span>
+<span class="status-badge">{{ emergency.status }}</span>
+</div>
+
+<div class="detail-row">
+<span>Location</span>
+<strong>{{ emergency.location_name|default:"Unknown Location" }}</strong>
+</div>
+
+<div class="detail-row">
+<span>Phone</span>
+<strong>{{ emergency.phone_number|default:"Not Available" }}</strong>
+</div>
+
+<div class="detail-row">
+<span>Reported</span>
+<strong>{{ emergency.created_at }}</strong>
+</div>
+
+<div class="detail-row">
+<span>Current Officer</span>
+<strong>{{ emergency.assigned_officer|default:"Not Assigned" }}</strong>
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="portal-card">
+
+<div class="portal-card-header">
+<h2>Emergency Map</h2>
+</div>
+
+<div class="portal-card-body map-body">
+
+<div id="emergency-map"></div>
+
+</div>
+
+</div>
+
+<div class="portal-card">
+
+<div class="portal-card-header">
+<h2>Officer Assignment</h2>
+</div>
+
+<div class="portal-card-body">
+
+<form method="post" class="assignment-form">
+
+{% csrf_token %}
+
+<div class="form-group">
+{{ assignment_form.team_leader.label_tag }}
+{{ assignment_form.team_leader }}
+</div>
+
+<div class="form-group">
+{{ assignment_form.patrol_vehicle.label_tag }}
+{{ assignment_form.patrol_vehicle }}
+</div>
+
+<div class="form-group">
+{{ assignment_form.officer_count.label_tag }}
+{{ assignment_form.officer_count }}
+</div>
+
+<div class="form-group">
+{{ assignment_form.dispatch_notes.label_tag }}
+{{ assignment_form.dispatch_notes }}
+</div>
+
+<button type="submit" class="portal-primary-btn">
+  Assign Team
+</button>
+
+</form>
+
+</div>
+
+</div>
+
+<div class="portal-card">
+
+<div class="portal-card-header">
+<h2>Live Tracking</h2>
+</div>
+
+<div class="portal-card-body">
+
+<div
+    id="live-tracking"
+    data-url="{% url 'emergency_live_location' emergency.id %}">
+
+    <p>
+        <strong>Status:</strong>
+        <span id="live-status">
+            Connecting...
+        </span>
+    </p>
+
+    <p>
+        <strong>Latitude:</strong>
+        <span id="live-latitude">--</span>
+    </p>
+
+    <p>
+        <strong>Longitude:</strong>
+        <span id="live-longitude">--</span>
+    </p>
+
+    <p>
+        <strong>Last Update:</strong>
+        <span id="live-updated">--</span>
+    </p>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const latitude = {{ latitude }};
+    const longitude = {{ longitude }};
+    const accuracy = {{ accuracy }};
+
+    const map = L.map("emergency-map").setView(
+        [latitude, longitude],
+        17
+    );
+
+    L.tileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+            attribution: "&copy; OpenStreetMap contributors",
+            maxZoom: 19
+        }
+    ).addTo(map);
+
+    // Emergency marker
+    const emergencyMarker = L.marker([
+    latitude,
+    longitude
+]).addTo(map);
+
+emergencyMarker.bindPopup(`
+    <b>🚨 Emergency SOS</b><br>
+    <strong>Reference:</strong> {{ emergency.reference_number }}<br>
+    <strong>Status:</strong> {{ emergency.status }}<br>
+    <strong>Location:</strong> {{ emergency.location_name }}
+`).openPopup();
+
+    // GPS accuracy circle
+    const accuracyCircle = L.circle(
+    [latitude, longitude],
+    {
+        radius: accuracy,
+        color: "#dc2626",
+        fillColor: "#ef4444",
+        fillOpacity: 0.2,
+        weight: 2,
+    }
+).addTo(map);
+
+async function updateLiveTracking() {
+
+    try {
+
+        const liveUrl = document
+         .getElementById("live-tracking")
+         .dataset.url;
+
+        const response = await fetch(liveUrl);
+
+        const data = await response.json();
+
+        document.getElementById("live-status").textContent =
+            data.status;
+
+        document.getElementById("live-latitude").textContent =
+            data.latitude.toFixed(6);
+
+        document.getElementById("live-longitude").textContent =
+            data.longitude.toFixed(6);
+
+        document.getElementById("live-updated").textContent =
+            data.updated_at;
+
+        const newLocation = [
+            data.latitude,
+            data.longitude
+        ];
+
+        emergencyMarker.setLatLng(newLocation);
+
+        accuracyCircle.setLatLng(newLocation);
+
+        accuracyCircle.setRadius(
+            data.accuracy || 30
+        );
+
+        map.panTo(newLocation);
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Live tracking failed:",
+            error
+        );
+
+    }
+
+}
+
+updateLiveTracking();
+
+setInterval(
+    updateLiveTracking,
+    5000
+);
+
+});
+</script>
+
+{% endblock %}

@@ -155,6 +155,43 @@ class EmergencySOS(models.Model):
         blank=True,
         null=True,
     )
+    
+    team_leader = models.CharField(
+    max_length=150,
+    blank=True,
+    null=True,
+    )
+
+    patrol_vehicle = models.CharField(
+    max_length=50,
+    blank=True,
+    null=True,
+    )
+
+    officer_count = models.PositiveIntegerField(
+    blank=True,
+    null=True,
+    )
+
+    dispatch_notes = models.TextField(
+    blank=True,
+    null=True,
+    )
+
+    assigned_at = models.DateTimeField(
+    blank=True,
+    null=True,
+    )
+
+    dispatched_at = models.DateTimeField(
+    blank=True,
+    null=True,
+    )
+
+    arrived_at = models.DateTimeField(
+    blank=True,
+    null=True,
+    )
 
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()

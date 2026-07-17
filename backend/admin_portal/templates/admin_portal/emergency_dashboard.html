@@ -155,13 +155,12 @@
 
     <div class="emergency-footer">
 
-        <button class="portal-button">
-
-            <i class="bi bi-eye-fill"></i>
-
+        <a
+     href="{% url 'portal-emergency-detail' emergency.id %}"
+     class="portal-button">
+        <i class="bi bi-eye-fill"></i>
             View
-
-        </button>
+        </a>
 
         <button class="portal-button portal-button-secondary">
 

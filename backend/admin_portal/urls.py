@@ -94,4 +94,17 @@ urlpatterns = [
     emergency_dashboard_view,
     name="admin-emergency",
     ),
+    
+    path(
+    "emergency/<uuid:emergency_id>/",
+    views.emergency_detail_view,
+    name="portal-emergency-detail",
+    ),
+    
+    path(
+    "emergency/<uuid:emergency_id>/live/",
+    views.emergency_live_location,
+    name="emergency_live_location",
+    ),
+
 ]

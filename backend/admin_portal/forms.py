@@ -39,3 +39,27 @@ class PortalAuthenticationForm(AuthenticationForm):
                 "This account does not have portal access.",
                 code="portal_access_denied",
             )
+
+class EmergencyAssignmentForm(forms.Form):
+
+    team_leader = forms.CharField(
+        max_length=150,
+        label="Team Leader",
+    )
+
+    patrol_vehicle = forms.CharField(
+        max_length=50,
+        label="Patrol Vehicle",
+    )
+
+    officer_count = forms.IntegerField(
+        min_value=1,
+        initial=2,
+        label="Number of Officers",
+    )
+
+    dispatch_notes = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 4}),
+        label="Dispatch Notes",
+    )

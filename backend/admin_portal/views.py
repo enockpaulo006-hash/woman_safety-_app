@@ -1,6 +1,8 @@
 import csv
 from datetime import date, timedelta
 from urllib import request
+from django.http import JsonResponse
+
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth import get_user_model
@@ -16,6 +18,7 @@ from django.views.decorators.http import require_POST
 
 from .decorators import portal_access_required
 from .forms import PortalAuthenticationForm
+from .forms import EmergencyAssignmentForm
 from .roles import PortalRole, portal_context, role_required
 from reports.models import (
     IncidentCategory,
@@ -777,3 +780,47 @@ def emergency_dashboard_view(request):
             "resolved_today": resolved_today,
         },
     )  
+    
+@portal_access_required
+@role_required(PortalRole.ADMIN, PortalRole.POLICE_PARTNER)
+def emergency_detail_view(request, emergency_id):
+
+    emergency = get_object_or_404(
+        EmergencySOS,
+        id=emergency_id,
+    )
+
+    return render(
+        request,
+        "admin_portal/emergency_detail.html",
+        {
+            **portal_context(request, "emergency"),
+            "page_title": "Emergency Details",
+            "page_summary": "Emergency SOS information",
+            "emergency": emergency,
+            "assignment_form": EmergencyAssignmentForm(),
+
+            # Map coordinates
+            "latitude": emergency.latitude,
+            "longitude": emergency.longitude,
+            "accuracy": emergency.accuracy or 30,
+        },
+    )
+    
+
+@portal_access_required
+@role_required(PortalRole.ADMIN, PortalRole.POLICE_PARTNER)
+def emergency_live_location(request, emergency_id):
+
+    emergency = get_object_or_404(
+        EmergencySOS,
+        id=emergency_id,
+    )
+
+    return JsonResponse({
+        "latitude": emergency.latitude,
+        "longitude": emergency.longitude,
+        "accuracy": emergency.accuracy,
+        "status": emergency.status,
+        "updated_at": emergency.updated_at.strftime("%d %b %Y %H:%M:%S"),
+    })

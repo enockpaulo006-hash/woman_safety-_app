@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -78,8 +79,14 @@ class _ReportHomePageState extends State<ReportHomePage>
   bool _isSyncingPendingReports = false;
   bool _isPreparingSos = false;
 
+  Timer? _emergencyStatusTimer;
+  Timer? _cancelCountdownTimer;
+
+  bool _canCancelEmergency = false;
+  Duration _cancelTimeRemaining = const Duration(minutes: 5); 
+
   String? _emergencyReference;
-  String _emergencyStatus = "Waiting for Emergency SOS...";
+  String _emergencyStatus = "NONE";
 
   Map<String, dynamic>? _cachedHotspots;
 
@@ -109,6 +116,7 @@ void initState() {
     WidgetsBinding.instance.removeObserver(this);
     _areaController.dispose();
     _descriptionController.dispose();
+    _emergencyStatusTimer?.cancel();
     super.dispose();
   }
 
@@ -516,10 +524,28 @@ Future<Map<String, dynamic>> _getHotspotsData() async {
     if (!mounted) return;
 
     setState(() {
-      _emergencyReference = result.referenceNumber;
-      _emergencyStatus = result.status;
-      _isPreparingSos = false;
-    });
+ _emergencyReference = result.id;
+  _emergencyStatus = result.status;
+  _isPreparingSos = false;
+
+  _canCancelEmergency = true;
+  _cancelTimeRemaining = const Duration(minutes: 5);
+});
+
+_startCancelCountdown();
+
+    _emergencyStatusTimer?.cancel();
+
+    // Get the latest status immediately.
+    await _refreshEmergencyStatus();
+
+// Continue checking every 5 seconds.
+_emergencyStatusTimer = Timer.periodic(
+  const Duration(seconds: 5),
+  (_) {
+    _refreshEmergencyStatus();
+  },
+);
 
     _showSuccessSnack(
       "Emergency SOS sent successfully.",
@@ -538,6 +564,116 @@ Future<Map<String, dynamic>> _getHotspotsData() async {
     );
   }
   }
+
+Future<void> _refreshEmergencyStatus() async {
+  if (_emergencyReference == null) {
+    return;
+  }
+
+  try {
+    final result = await EmergencyApiService()
+        .getEmergencyStatus(_emergencyReference!);
+
+        debugPrint(
+          "Emergency Status Updated: ${result.status}",
+          );
+
+    if (!mounted) return;
+
+    setState(() {
+      _emergencyStatus = result.status;
+    });
+
+    if (result.status == "RESOLVED" ||
+    result.status == "CANCELLED") {
+
+  _emergencyStatusTimer?.cancel();
+  _cancelCountdownTimer?.cancel();
+
+  setState(() {
+    _canCancelEmergency = false;
+    _cancelTimeRemaining = Duration.zero;
+
+    if (result.status == "RESOLVED" ||
+        result.status == "CANCELLED") {
+      _emergencyStatus = "NONE";
+      _emergencyReference = null;
+    }
+  });
+}
+  } catch (_) {
+    // Ignore temporary network errors.
+  }
+}
+
+Future<void> _cancelEmergencySOS() async {
+
+  if (_emergencyReference == null) {
+    return;
+  }
+
+  try {
+
+    await EmergencyApiService().cancelEmergencySOS(
+      _emergencyReference!,
+    );
+
+    _emergencyStatusTimer?.cancel();
+    _cancelCountdownTimer?.cancel();
+
+    if (!mounted) return;
+
+    setState(() {
+
+      _emergencyStatus = "NONE";
+      _emergencyReference = null;
+
+      _canCancelEmergency = false;
+
+      _cancelTimeRemaining =
+          const Duration(minutes: 5);
+
+    });
+
+    _showSuccessSnack(
+      "Emergency cancelled successfully.",
+    );
+
+  } catch (e) {
+
+    _showErrorSnack(
+      e.toString(),
+    );
+
+  }
+
+}
+
+void _startCancelCountdown() {
+  _cancelCountdownTimer?.cancel();
+
+  _cancelCountdownTimer = Timer.periodic(
+    const Duration(seconds: 1),
+    (timer) {
+      if (!mounted) return;
+
+      if (_cancelTimeRemaining.inSeconds <= 1) {
+        timer.cancel();
+
+        setState(() {
+          _canCancelEmergency = false;
+          _cancelTimeRemaining = Duration.zero;
+        });
+
+        return;
+      }
+
+      setState(() {
+        _cancelTimeRemaining -= const Duration(seconds: 1);
+      });
+    },
+  );
+}
 
 
   Future<void> _showSosReadySheet({
@@ -1527,10 +1663,13 @@ if (topAreas.isNotEmpty)
         ),
         const SizedBox(height: 18),
         _SosActionCard(
-          isPreparing: _isPreparingSos,
+         isPreparing: _isPreparingSos,
           onActivate: _activateSosSupport,
+          onCancelSOS: _cancelEmergencySOS,
           emergencyStatus: _emergencyStatus,
-        ),
+         canCancelEmergency: _canCancelEmergency,
+          cancelTimeRemaining: _cancelTimeRemaining,
+),
       ],
     );
   }
@@ -1821,248 +1960,6 @@ class _StatusPill extends StatelessWidget {
     );
   }
 }
-
-/*class _HomeOverviewCard extends StatelessWidget {
-  const _HomeOverviewCard({
-    required this.pendingReportCount,
-    required this.usingOfflineTaxonomies,
-    required this.onOpenReportForm,
-    required this.onOpenOfflineQueue,
-  });
-
-  final int pendingReportCount;
-  final bool usingOfflineTaxonomies;
-  final Future<void> Function() onOpenReportForm;
-  final VoidCallback onOpenOfflineQueue;
-
-  @override
-  Widget build(BuildContext context) {
-    final strings = AppSettingsScope.stringsOf(context);
-    final queueText = pendingReportCount == 0
-        ? strings.text('noSavedOfflineReports')
-        : strings.text('savedOfflineQueue', {
-            'count': pendingReportCount.toString(),
-          });
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(22),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              strings.text('homeOverviewTitle'),
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              usingOfflineTaxonomies
-                  ? strings.text('homeOverviewOffline')
-                  : strings.text('homeOverviewOnline'),
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: _mutedText, height: 1.5),
-            ),
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: _softPink,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: _primaryIndigo,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: const Icon(Icons.file_upload_rounded, color: Colors.white),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      queueText,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: _deepIndigo,
-                        fontWeight: FontWeight.w700,
-                        height: 1.35,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 18),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                FilledButton.icon(
-                  onPressed: onOpenReportForm,
-                  icon: const Icon(Icons.edit_note_rounded),
-                  label: Text(strings.text('openReportForm')),
-                ),
-                OutlinedButton.icon(
-                  onPressed: onOpenOfflineQueue,
-                  icon: const Icon(Icons.cloud_upload_outlined),
-                  label: Text(strings.text('savedOffline')),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HomeQuickActionsCard extends StatelessWidget {
-  const _HomeQuickActionsCard({
-    required this.pendingReportCount,
-    required this.onOpenReportForm,
-    required this.onOpenOfflineQueue,
-    required this.onOpenGuide,
-    required this.onOpenSyncCenter,
-  });
-
-  final int pendingReportCount;
-  final Future<void> Function() onOpenReportForm;
-  final VoidCallback onOpenOfflineQueue;
-  final VoidCallback onOpenGuide;
-  final VoidCallback onOpenSyncCenter;
-
-  @override
-  Widget build(BuildContext context) {
-    final strings = AppSettingsScope.stringsOf(context);
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              strings.text('quickAccess'),
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                _QuickAccessTile(
-                  label: strings.text('report'),
-                  icon: Icons.note_add_rounded,
-                  onTap: () => onOpenReportForm(),
-                ),
-                _QuickAccessTile(
-                  label: strings.text('offline'),
-                  icon: Icons.offline_bolt_rounded,
-                  badge: pendingReportCount > 0 ? "$pendingReportCount" : null,
-                  onTap: onOpenOfflineQueue,
-                ),
-                _QuickAccessTile(
-                  label: strings.text('guide'),
-                  icon: Icons.shield_outlined,
-                  onTap: onOpenGuide,
-                ),
-                _QuickAccessTile(
-                  label: strings.text('sync'),
-                  icon: Icons.sync_rounded,
-                  onTap: onOpenSyncCenter,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _QuickAccessTile extends StatelessWidget {
-  const _QuickAccessTile({
-    required this.label,
-    required this.icon,
-    required this.onTap,
-    this.badge,
-  });
-
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
-  final String? badge;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 150,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(22),
-          child: Ink(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: _softPink,
-              borderRadius: BorderRadius.circular(22),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(icon, color: _primaryIndigo),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: const TextStyle(
-                      color: _deepIndigo,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                if (badge != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _primaryIndigo,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      badge!,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}*/
 
 class _PendingQueueCard extends StatelessWidget {
   const _PendingQueueCard({
@@ -2592,14 +2489,82 @@ class _ThemeColorDot extends StatelessWidget {
 
 class _SosActionCard extends StatelessWidget {
   const _SosActionCard({
+  super.key,
   required this.isPreparing,
   required this.onActivate,
+  required this.onCancelSOS,
   required this.emergencyStatus,
+  required this.canCancelEmergency,
+  required this.cancelTimeRemaining,
 });
 
-  final bool isPreparing;
-  final Future<void> Function() onActivate;
-  final String emergencyStatus;
+final bool isPreparing;
+final Future<void> Function() onActivate;
+final Future<void> Function() onCancelSOS;
+final String emergencyStatus;
+
+final bool canCancelEmergency;
+final Duration cancelTimeRemaining;
+
+  bool get _hasActiveEmergency =>
+    emergencyStatus.isNotEmpty &&
+    emergencyStatus != "NONE";
+
+    bool get _canSendSOS =>
+    !isPreparing && !_hasActiveEmergency;
+
+bool get _assigned =>
+    emergencyStatus != "NEW";
+
+bool get _onTheWay =>
+    emergencyStatus == "ON_THE_WAY" ||
+    emergencyStatus == "ARRIVED" ||
+    emergencyStatus == "RESOLVED";
+
+bool get _resolved =>
+    emergencyStatus == "RESOLVED";
+
+Widget buildTimelineLine(bool active) {
+  return Container(
+    width: 2,
+    height: 22,
+    color: active
+        ? Colors.greenAccent
+        : Colors.white24,
+  );
+}
+
+Widget buildTimelineStep({
+  required IconData icon,
+  required String title,
+  required bool active,
+}) {
+  return Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Icon(
+        icon,
+        color: active
+            ? Colors.greenAccent
+            : Colors.white54,
+      ),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Text(
+          title,
+          style: TextStyle(
+            color: active
+                ? Colors.white
+                : Colors.white54,
+            fontWeight: active
+                ? FontWeight.bold
+                : FontWeight.normal,
+          ),
+        ),
+      ),
+    ],
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -2659,11 +2624,48 @@ class _SosActionCard extends StatelessWidget {
             ),
 
             const SizedBox(height: 30),
+            const SizedBox(height: 30),
+
+if (_hasActiveEmergency && canCancelEmergency)
+  Column(
+    children: [
+
+      Text(
+        "Cancel available for "
+        "${cancelTimeRemaining.inMinutes.remainder(60).toString().padLeft(2, '0')}:"
+        "${(cancelTimeRemaining.inSeconds.remainder(60)).toString().padLeft(2, '0')}",
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+
+      const SizedBox(height: 10),
+
+      SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: onCancelSOS,
+          style: OutlinedButton.styleFrom(
+            foregroundColor: Colors.white,
+            side: const BorderSide(color: Colors.white),
+            padding: const EdgeInsets.symmetric(vertical: 18),
+          ),
+          icon: const Icon(Icons.cancel),
+          label: const Text(
+            "Cancel SOS",
+          ),
+        ),
+      ),
+
+      const SizedBox(height: 20),
+    ],
+  ),
 
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
-                onPressed: isPreparing ? null : onActivate,
+                onPressed: _canSendSOS ? onActivate : null,
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: const Color(0xFFD32F2F),
@@ -2679,8 +2681,12 @@ class _SosActionCard extends StatelessWidget {
                         ),
                       )
                     : const Icon(Icons.warning_rounded),
-                label: const Text(
-                  "SEND EMERGENCY SOS",
+                label: Text(
+                  isPreparing
+                     ? "Sending..."
+                     : _hasActiveEmergency
+                        ? "SOS ACTIVE"
+                        : "SEND EMERGENCY SOS",
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -2688,123 +2694,76 @@ class _SosActionCard extends StatelessWidget {
                 ),
               ),
             ),
+
+          
 const SizedBox(height: 30),
 
-const Divider(
-  color: Colors.white38,
-),
+if (_hasActiveEmergency)
+  Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: 0.15),
+      borderRadius: BorderRadius.circular(18),
+    ),
+    child: Column(
+      children: [
 
-const SizedBox(height: 20),
+        buildTimelineStep(
+          icon: Icons.check_circle,
+          title: "Report Submitted",
+          active: true,
+        ),
 
-Align(
-  alignment: Alignment.centerLeft,
-  child: Text(
-    "Police Response",
-    style: TextStyle(
-      color: Colors.white,
-      fontSize: 18,
-      fontWeight: FontWeight.bold,
+        buildTimelineLine(_assigned),
+
+        buildTimelineStep(
+          icon: Icons.person,
+          title: "Officer Assigned",
+          active: _assigned,
+        ),
+
+        buildTimelineLine(_onTheWay),
+
+        buildTimelineStep(
+          icon: Icons.local_police,
+          title: "Police On The Way",
+          active: _onTheWay,
+        ),
+
+        buildTimelineLine(_resolved),
+
+        buildTimelineStep(
+          icon: Icons.verified,
+          title: "Emergency Resolved",
+          active: _resolved,
+        ),
+
+      ],
+    ),
+  )
+else
+  Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: 0.10),
+      borderRadius: BorderRadius.circular(18),
+    ),
+    child: const Text(
+      "No active emergency.\n\nPress SEND EMERGENCY SOS only if you are in immediate danger.",
+      textAlign: TextAlign.center,
+      style: TextStyle(
+        color: Colors.white70,
+        fontSize: 15,
+      ),
     ),
   ),
-),
 
-const SizedBox(height: 18),
-
-Container(
-  width: double.infinity,
-  padding: const EdgeInsets.all(16),
-  decoration: BoxDecoration(
-    color: Colors.white.withValues(alpha: 0.15),
-    borderRadius: BorderRadius.circular(18),
-  ),
-  child: Column(
-    children: [
-      Row(
-        children: [
-          const Icon(
-            Icons.hourglass_top,
-            color: Colors.white,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-                emergencyStatus,
-              style: const TextStyle(
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ],
-      ),
-
-      const SizedBox(height: 12),
-
-      const Row(
-        children: [
-          Icon(
-            Icons.person_outline,
-            color: Colors.white54,
-          ),
-          SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              "Officer Assignment",
-              style: TextStyle(
-                color: Colors.white54,
-              ),
-            ),
-          ),
-        ],
-      ),
-
-      const SizedBox(height: 12),
-
-      const Row(
-        children: [
-          Icon(
-            Icons.local_police_outlined,
-            color: Colors.white54,
-          ),
-          SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              "Police On The Way",
-              style: TextStyle(
-                color: Colors.white54,
-              ),
-            ),
-          ),
-        ],
-      ),
-
-      const SizedBox(height: 12),
-
-      const Row(
-        children: [
-          Icon(
-            Icons.check_circle_outline,
-            color: Colors.white54,
-          ),
-          SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              "Emergency Resolved",
-              style: TextStyle(
-                color: Colors.white54,
-              ),
-            ),
-          ),
-        ],
-      ),
-    ],
-  ),
-),
-
-
-          ],
-        ),
-      ),
-    );
+          ], // outer Column children
+        ), // outer Column
+      ), // Padding
+    ); // main Container
   }
 }
 
@@ -2859,16 +2818,6 @@ class _SafetyDrawer extends StatelessWidget {
                   child: const Icon(Icons.shield_outlined, color: Colors.white),
                 ),
                 const SizedBox(width: 12),
-                /* const Expanded(
-                  child: Text(
-                    "Move Safety",
-                    style: TextStyle(
-                      color: _deepIndigo,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),*/
                 _StatusPill(
                   label: isLiveConnectionAvailable
                       ? strings.text('online')

@@ -82,17 +82,16 @@ WORKFLOW_STEPS = [
         },
     },
     {
-        "key": "privacy",
-        "label": "Privacy",
-        "title": "Check privacy",
-        "description": "Confirm data is safe before sharing or exporting.",
-        "url_name": "admin-privacy",
+      "key": "privacy",
+     "label": "Privacy",
+      "title": "Check privacy",
+       "description": "Confirm data is safe before sharing or exporting.",
+       "url_name": "admin-privacy",
         "roles": {
-            PortalRole.ADMIN,
+           
             PortalRole.MODERATOR,
-            PortalRole.POLICY_OFFICER,
-            PortalRole.TAWLA_PARTNER,
-            PortalRole.RESEARCHER,
+           
+    
         },
     },
     {
@@ -102,7 +101,7 @@ WORKFLOW_STEPS = [
     "description": "Manage users, categories, location types and system settings.",
     "url_name": "admin-settings",
     "roles": {
-        PortalRole.ADMIN,
+       PortalRole.MODERATOR,
     },
 },
 ]

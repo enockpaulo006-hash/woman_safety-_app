@@ -24,6 +24,7 @@
 <span class="status-badge">{{ emergency.status }}</span>
 </div>
 
+
 <div class="detail-row">
 <span>Location</span>
 <strong>{{ emergency.location_name|default:"Unknown Location" }}</strong>
@@ -99,6 +100,38 @@
 <button type="submit" class="portal-primary-btn">
   Assign Team
 </button>
+
+{% if emergency.status == "OFFICER_ASSIGNED" %}
+
+<button
+    type="submit"
+    name="start_journey"
+    value="1"
+    class="portal-button portal-button-success"
+    style="margin-top:12px;">
+
+    <i class="bi bi-truck"></i>
+    Start Journey
+
+</button>
+
+{% endif %}
+
+{% if emergency.status == "ON_THE_WAY" %}
+
+<button
+    type="submit"
+    name="resolve_emergency"
+    value="1"
+    class="portal-button"
+    style="margin-top:12px; background:#16a34a; color:white;">
+
+    <i class="bi bi-check-circle-fill"></i>
+    Resolve Emergency
+
+</button>
+
+{% endif %}
 
 </form>
 

@@ -1,5 +1,9 @@
+from itertools import count
+
 from django.http import JsonResponse
 from django.utils import timezone
+from django.shortcuts import get_object_or_404
+from datetime import timedelta
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -103,23 +107,105 @@ class EmergencySOSCreateAPIView(APIView):
             status=status.HTTP_201_CREATED,
         )
 
+class EmergencySOSStatusAPIView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, emergency_id, *args, **kwargs):
+
+        emergency = get_object_or_404(
+            EmergencySOS,
+            id=emergency_id,
+        )
+
+        return Response(
+            {
+                "id": str(emergency.id),
+                "reference_number": emergency.reference_number,
+                "status": emergency.status,
+                "assigned_officer": emergency.assigned_officer,
+                "assigned_at": emergency.assigned_at,
+                "dispatched_at": emergency.dispatched_at,
+                "arrived_at": emergency.arrived_at,
+                "resolved_at": emergency.resolved_at,
+                "updated_at": emergency.updated_at,
+            }
+        )
+
+class EmergencySOSCancelAPIView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, emergency_id, *args, **kwargs):
+
+        emergency = get_object_or_404(
+            EmergencySOS,
+            id=emergency_id,
+        )
+
+        # Already finished?
+        if emergency.status in [
+            EmergencySOS.Status.RESOLVED,
+            EmergencySOS.Status.CANCELLED,
+        ]:
+            return Response(
+                {
+                    "detail": "Emergency already closed."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # More than five minutes?
+       
+        created_at = emergency.created_at
+
+        if timezone.is_naive(created_at):
+                created_at = timezone.make_aware(
+                    created_at,
+                    timezone.get_current_timezone(),
+        )   
+
+        if timezone.now() > created_at + timedelta(minutes=5):
+            return Response(
+         {
+            "detail": "Cancellation period has expired."
+            },
+        status=status.HTTP_400_BAD_REQUEST,
+    )
+
+        emergency.status = EmergencySOS.Status.CANCELLED
+        emergency.updated_at = timezone.now()
+        emergency.is_active = False
+        emergency.save()
+
+        return Response(
+            {
+                "status": emergency.status,
+                "message": "Emergency cancelled successfully.",
+            }
+        )
+
 class HotspotAPIView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request, *args, **kwargs):
+
         category = request.GET.get("category", "all")
 
         reports = IncidentReport.objects.select_related(
             "category",
             "location_type",
-        ).filter(status=IncidentReport.Status.APPROVED)
+        ).filter(
+            status=IncidentReport.Status.APPROVED
+        )
 
         if category != "all":
             reports = reports.filter(category_id=category)
 
-        hotspot_data = []
         area_counts = {}
+        area_locations = {}
         category_counts = {}
+
         time_counts = {
             "morning": 0,
             "afternoon": 0,
@@ -127,7 +213,12 @@ class HotspotAPIView(APIView):
             "night": 0,
         }
 
+        # -------------------------
+        # Collect statistics
+        # -------------------------
+
         for report in reports[:500]:
+
             if not report.geom:
                 continue
 
@@ -135,6 +226,7 @@ class HotspotAPIView(APIView):
             lng = float(report.geom.x)
 
             hour = report.occurred_at.hour
+
             if 5 <= hour < 12:
                 bucket = "morning"
             elif 12 <= hour < 17:
@@ -163,23 +255,49 @@ class HotspotAPIView(APIView):
 
             area_counts[area] = area_counts.get(area, 0) + 1
 
-            category_counts[report.category.name] = (
-                category_counts.get(report.category.name, 0) + 1
+            if area not in area_locations:
+                area_locations[area] = (lat, lng)
+
+            category_name = report.category.name
+
+            category_counts[category_name] = (
+                category_counts.get(category_name, 0) + 1
             )
 
-            hotspot_data.append(
-                {
-                    "id": str(report.id),
-                    "public_reference": report.public_reference,
-                    "category": report.category.name,
-                    "location_type": report.location_type.name,
-                    "area": area,
-                    "occurred_at": report.occurred_at.isoformat(),
-                    "latitude": lat,
-                    "longitude": lng,
-                    "time_bucket": bucket,
-                }
-            )
+        # -------------------------
+        # Build hotspot data
+        # -------------------------
+
+        hotspot_data = []
+
+        for area, count in area_counts.items():
+
+            lat, lng = area_locations[area]
+
+            if count >= 6:
+                radius = 150
+                color = "#dc2626"
+                risk = "High"
+
+            elif count >= 3:
+                radius = 90
+                color = "#f97316"
+                risk = "Medium"
+
+            else:
+                radius = 50
+                color = "#facc15"
+                risk = "Low"
+
+            hotspot_data.append({
+                "area": area,
+                "latitude": lat,
+                "longitude": lng,
+                "report_count": count,
+                "radius": radius,
+                "color": color,
+                "risk_level": risk,
+            })
 
         top_areas = sorted(
             area_counts.items(),
@@ -198,11 +316,17 @@ class HotspotAPIView(APIView):
                 "reports": hotspot_data,
                 "total": len(hotspot_data),
                 "top_areas": [
-                    {"label": label, "count": count}
+                    {
+                        "label": label,
+                        "count": count,
+                    }
                     for label, count in top_areas
                 ],
                 "top_categories": [
-                    {"label": label, "count": count}
+                    {
+                        "label": label,
+                        "count": count,
+                    }
                     for label, count in top_categories
                 ],
                 "time_distribution": time_counts,

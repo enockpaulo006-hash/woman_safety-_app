@@ -15,6 +15,8 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
+from django.contrib import messages
+from django.utils import timezone
 
 from .decorators import portal_access_required
 from .forms import PortalAuthenticationForm
@@ -790,6 +792,84 @@ def emergency_detail_view(request, emergency_id):
         id=emergency_id,
     )
 
+    if request.method == "POST":
+
+     # Start Journey
+        if "start_journey" in request.POST:
+
+            emergency.status = EmergencySOS.Status.ON_THE_WAY
+            emergency.updated_at = timezone.now()
+            emergency.save()
+
+            messages.success(
+            request,
+            "Officer is now on the way."
+        )
+
+        return redirect(
+            "portal-emergency-detail",
+            emergency_id=emergency.id,
+        )
+
+    # Resolve Emergency
+    if "resolve_emergency" in request.POST:
+
+        emergency.status = EmergencySOS.Status.RESOLVED
+        emergency.updated_at = timezone.now()
+        emergency.save()
+
+        messages.success(
+            request,
+            "Emergency resolved successfully."
+        )
+
+        return redirect(
+            "portal-emergency-detail",
+            emergency_id=emergency.id,
+        )
+
+    form = EmergencyAssignmentForm(request.POST)
+
+    if not form.is_valid():
+         print(form.errors)
+
+    if form.is_valid():
+            print("===== FORM IS VALID =====")
+ 
+            emergency.team_leader = form.cleaned_data["team_leader"]
+            emergency.assigned_officer = form.cleaned_data["team_leader"]
+            emergency.patrol_vehicle = form.cleaned_data["patrol_vehicle"]
+            emergency.officer_count = form.cleaned_data["officer_count"]
+            emergency.dispatch_notes = form.cleaned_data["dispatch_notes"]
+
+            emergency.status = EmergencySOS.Status.OFFICER_ASSIGNED
+            emergency.assigned_at = timezone.now()
+            emergency.updated_at = timezone.now()
+
+            emergency.save()
+            
+
+            messages.success(
+                request,
+                "Emergency team assigned successfully."
+            )
+
+            return redirect(
+                "portal-emergency-detail",
+                emergency_id=emergency.id,
+            )
+
+    else:
+
+        form = EmergencyAssignmentForm(
+            initial={
+                "team_leader": emergency.team_leader,
+                "patrol_vehicle": emergency.patrol_vehicle,
+                "officer_count": emergency.officer_count,
+                "dispatch_notes": emergency.dispatch_notes,
+            }
+        )
+
     return render(
         request,
         "admin_portal/emergency_detail.html",
@@ -798,15 +878,13 @@ def emergency_detail_view(request, emergency_id):
             "page_title": "Emergency Details",
             "page_summary": "Emergency SOS information",
             "emergency": emergency,
-            "assignment_form": EmergencyAssignmentForm(),
+            "assignment_form": form,
 
-            # Map coordinates
             "latitude": emergency.latitude,
             "longitude": emergency.longitude,
             "accuracy": emergency.accuracy or 30,
         },
-    )
-    
+    ) 
 
 @portal_access_required
 @role_required(PortalRole.ADMIN, PortalRole.POLICE_PARTNER)

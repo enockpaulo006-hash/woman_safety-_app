@@ -3,17 +3,13 @@ from .views import (
     HealthCheckAPIView,
     IncidentCategoryListAPIView,
     IncidentReportCreateAPIView,
-    LocationTypeListAPIView,
-    HotspotAPIView,
-)
-from .views import (
-    HealthCheckAPIView,
-    IncidentCategoryListAPIView,
-    IncidentReportCreateAPIView,
     EmergencySOSCreateAPIView,
+    EmergencySOSStatusAPIView,
+    EmergencySOSCancelAPIView,
     LocationTypeListAPIView,
     HotspotAPIView,
 )
+
 
 urlpatterns = [
     path(
@@ -45,5 +41,16 @@ urlpatterns = [
         "hotspots/",
         HotspotAPIView.as_view(),
         name="hotspot-data",
+    ),
+    path(
+    "emergency/sos/<uuid:emergency_id>/status/",
+    EmergencySOSStatusAPIView.as_view(),
+    name="emergency-sos-status",
+    ),
+    
+    path(
+    "emergency/sos/<uuid:emergency_id>/cancel/",
+    EmergencySOSCancelAPIView.as_view(),
+    name="emergency-sos-cancel",
     ),
 ]

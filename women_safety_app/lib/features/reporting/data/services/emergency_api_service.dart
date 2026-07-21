@@ -2,12 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
-import '../../../auth/data/services/auth_session_store.dart';
 import '../../../../core/config/api_config.dart';
+import '../../../auth/data/services/auth_session_store.dart';
 import '../models/emergency_sos_result.dart';
-import 'package:flutter/foundation.dart';
+import '../models/emergency_status_result.dart';
 
 class EmergencyApiService {
   static const _requestTimeout = Duration(seconds: 45);
@@ -25,61 +26,127 @@ class EmergencyApiService {
     double? accuracy,
     String? phoneNumber,
     String? locationName,
-}) async {
+  }) async {
+    debugPrint("===== SENDING SOS =====");
+    debugPrint("Latitude: $latitude");
+    debugPrint("Longitude: $longitude");
 
-  debugPrint("===== SENDING SOS =====");
-  debugPrint("Latitude: $latitude");
-  debugPrint("Longitude: $longitude");
+    final payload = {
+      "latitude": latitude,
+      "longitude": longitude,
+      "accuracy": accuracy,
+      "phone_number": phoneNumber,
+      "location_name": locationName,
+    };
 
-  final payload = {
-    "latitude": latitude,
-    "longitude": longitude,
-    "accuracy": accuracy,
-    "phone_number": phoneNumber,
-    "location_name": locationName,
-  };
+    debugPrint(_uri("/emergency/sos/").toString());
 
-  debugPrint(_uri("/emergency/sos/").toString());
+    final session = await AuthSessionStore().loadSession();
 
+    if (session == null) {
+      throw const EmergencyApiException(
+        "Please sign in before sending an emergency SOS.",
+      );
+    }
+
+    final headers = {
+      "Content-Type": "application/json",
+      "Authorization": "Token ${session.token}",
+    };
+
+    debugPrint("===== TOKEN =====");
+    debugPrint(session.token);
+
+    debugPrint("===== HEADERS =====");
+    debugPrint(headers.toString());
+
+    debugPrint("===== PAYLOAD =====");
+    debugPrint(jsonEncode(payload));
+
+    final response = await _client
+        .post(
+          _uri("/emergency/sos/"),
+          headers: headers,
+          body: jsonEncode(payload),
+        )
+        .timeout(_requestTimeout);
+
+    debugPrint("===== RESPONSE =====");
+    debugPrint("STATUS: ${response.statusCode}");
+    debugPrint("BODY: ${response.body}");
+
+    final body = _decodeResponse(response);
+
+    if (response.statusCode != 201) {
+      throw EmergencyApiException(_extractErrorMessage(body));
+    }
+
+    return EmergencySOSResult.fromJson(body);
+  }
+
+  /// Fetch current emergency status
+  Future<EmergencyStatusResult> getEmergencyStatus(
+    String emergencyId,
+  ) async {
+    final session = await AuthSessionStore().loadSession();
+
+    if (session == null) {
+      throw const EmergencyApiException(
+        "Please sign in first.",
+      );
+    }
+
+    final response = await _client
+        .get(
+          _uri("/emergency/sos/$emergencyId/status/"),
+          headers: {
+            "Authorization": "Token ${session.token}",
+          },
+        )
+        .timeout(_requestTimeout);
+
+    final body = _decodeResponse(response);
+
+    if (response.statusCode != 200) {
+      throw EmergencyApiException(
+        _extractErrorMessage(body),
+      );
+    }
+
+    return EmergencyStatusResult.fromJson(body);
+  }
+
+  Future<void> cancelEmergencySOS(
+  String emergencyId,
+) async {
   final session = await AuthSessionStore().loadSession();
 
-if (session == null) {
-  throw const EmergencyApiException(
-    "Please sign in before sending an emergency SOS.",
-  );
-}
+  if (session == null) {
+    throw const EmergencyApiException(
+      "Please sign in first.",
+    );
+  }
 
-final headers = {
-  "Content-Type": "application/json",
-  "Authorization": "Token ${session.token}",
-};
+  final response = await _client
+      .post(
+        _uri("/emergency/sos/$emergencyId/cancel/"),
+        headers: {
+          "Authorization": "Token ${session.token}",
+        },
+      )
+      .timeout(_requestTimeout);
 
-debugPrint("===== TOKEN =====");
-debugPrint(session.token);
-
-debugPrint("===== HEADERS =====");
-debugPrint(headers.toString());
-
-debugPrint("===== PAYLOAD =====");
-debugPrint(jsonEncode(payload));
-
-final response = await _client.post(
-  _uri("/emergency/sos/"),
-  headers: headers,
-  body: jsonEncode(payload),
-).timeout(_requestTimeout);
-
-debugPrint("===== RESPONSE =====");
-debugPrint("STATUS: ${response.statusCode}");
-debugPrint("BODY: ${response.body}");
+  debugPrint("===== CANCEL SOS =====");
+  debugPrint("STATUS: ${response.statusCode}");
+  debugPrint("BODY: ${response.body}");
 
   final body = _decodeResponse(response);
 
-  if (response.statusCode != 201) {
-    throw EmergencyApiException(_extractErrorMessage(body));
+  if (response.statusCode != 200) {
+    throw EmergencyApiException(
+      _extractErrorMessage(body),
+    );
   }
-
-  return EmergencySOSResult.fromJson(body);
 }
 
   dynamic _decodeResponse(http.Response response) {

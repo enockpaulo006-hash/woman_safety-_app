@@ -160,72 +160,111 @@
 
             fetch(API_BASE)
                 .then((res) => res.json())
-                .then((data) => {
-                    loadingEl.style.display = "none";
-                    const reports = data.reports || [];
-                    totalEl.textContent = data.total ?? 0;
+               .then((data) => {
 
-                    if (reports.length === 0) {
-                        emptyEl.style.display = "grid";
-                        return;
-                    }
+    loadingEl.style.display = "none";
 
-                    const bounds = [];
-                    const timeColors = {
-                        morning: "#e8d5b7",
-                        afternoon: "#d4a373",
-                        evening: "#d4a373",
-                        night: "#3d2b1f",
-                    };
+    const reports = data.reports || [];
 
-                    reports.forEach((r) => {
-                        const color = timeColors[r.time_bucket] || "#d4a373";
-                        const icon = L.divIcon({
-                            className: "",
-                            html: `<div style="
-                                width: 14px; height: 14px;
-                                border-radius: 50%;
-                                background: ${color};
-                                border: 2px solid #fff;
-                                box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-                            "></div>`,
-                            iconSize: [14, 14],
-                            iconAnchor: [7, 7],
-                        });
-                        const marker = L.marker([r.latitude, r.longitude], { icon, title: r.public_reference })
-                            .bindPopup(`<strong>${r.public_reference}</strong><br>
-                                        <span style="color:#666">${r.category} • ${r.area}</span><br>
-                                        <small>${new Date(r.occurred_at).toLocaleString()}</small>`)
-                            .addTo(markerLayer);
-                        bounds.push([r.latitude, r.longitude]);
-                    });
+    totalEl.textContent = data.total ?? 0;
 
-                    if (bounds.length > 1) {
-                        map.fitBounds(bounds, { padding: [30, 30], maxZoom: 16 });
-                    } else if (bounds.length === 1) {
-                        map.setView(bounds[0], 15);
-                        markerLayer.eachLayer((m) => m.openPopup());
-                    }
+    if (reports.length === 0) {
+        emptyEl.style.display = "grid";
+        return;
+    }
 
-                    const topAreas = data.top_areas || [];
-                    areasEl.innerHTML = topAreas.length
-                        ? topAreas.map((a) => `
-                            <div class="area-item">
-                                <div class="area-dot"></div>
-                                <span class="area-name">${a.label}</span>
-                                <span class="area-count">${a.count}</span>
-                            </div>`).join("")
-                        : '<div style="font-size:0.85rem;color:#d6afc1;">No areas yet</div>';
+    const bounds = [];
 
-                    const td = data.time_distribution || {};
-                    timeEl.innerHTML = `
-                        Morning: ${td.morning ?? 0} &nbsp;|&nbsp;
-                        Afternoon: ${td.afternoon ?? 0} &nbsp;|&nbsp;
-                        Evening: ${td.evening ?? 0} &nbsp;|&nbsp;
-                        Night: ${td.night ?? 0}
-                    `;
-                })
-                .catch((err) => {
+    markerLayer.clearLayers();
+
+    reports.forEach((r) => {
+
+        // Hotspot marker
+        const marker = L.marker(
+            [r.latitude, r.longitude],
+            {
+                title: r.area
+            }
+        ).addTo(markerLayer);
+
+        // Hotspot circle
+        L.circle(
+            [r.latitude, r.longitude],
+            {
+                radius: r.radius,
+                color: r.color,
+                fillColor: r.color,
+                fillOpacity: 0.35,
+                weight: 2
+            }
+        ).addTo(markerLayer);
+
+        // Popup
+        marker.bindPopup(`
+            <div style="min-width:220px">
+                <h4 style="margin-bottom:8px;">📍 ${r.area}</h4>
+
+                <p><strong>Risk Level:</strong> ${r.risk_level}</p>
+
+                <p><strong>Total Reports:</strong> ${r.report_count}</p>
+
+                <p style="color:#666;">
+                    Hotspot generated from approved incidents.
+                </p>
+            </div>
+        `);
+
+        bounds.push([r.latitude, r.longitude]);
+
+    });
+
+    if (bounds.length > 1) {
+
+        map.fitBounds(bounds, {
+            padding: [30, 30],
+            maxZoom: 15
+        });
+
+    }
+    else if (bounds.length === 1) {
+
+        map.setView(bounds[0], 15);
+
+        markerLayer.eachLayer(layer => {
+
+            if (layer.getPopup) {
+                layer.openPopup();
+            }
+
+        });
+
+    }
+
+    const topAreas = data.top_areas || [];
+
+    areasEl.innerHTML = topAreas.length
+        ? topAreas.map((a) => `
+            <div class="area-item">
+                <div class="area-dot"></div>
+                <span class="area-name">${a.label}</span>
+                <span class="area-count">${a.count}</span>
+            </div>
+        `).join("")
+        : '<div style="font-size:0.85rem;color:#666;">No hotspot areas found.</div>';
+
+    const td = data.time_distribution || {};
+
+    timeEl.innerHTML = `
+        Morning: ${td.morning ?? 0}
+        &nbsp; | &nbsp;
+        Afternoon: ${td.afternoon ?? 0}
+        &nbsp; | &nbsp;
+        Evening: ${td.evening ?? 0}
+        &nbsp; | &nbsp;
+        Night: ${td.night ?? 0}
+    `;
+
+})
                     loadingEl.textContent = "Failed to load hotspot data.";
                     console.error(err);
                 });

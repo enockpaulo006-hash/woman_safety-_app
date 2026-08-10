@@ -1,4 +1,4 @@
-# Project 17 - Women Safety Incident Reporting Platform
+# Women Safety Incident Reporting Platform
 
 This repository contains a Flutter mobile app and Django/PostGIS backend for anonymous safety incident reporting, moderation, hotspot mapping, and monthly policy briefs.
 

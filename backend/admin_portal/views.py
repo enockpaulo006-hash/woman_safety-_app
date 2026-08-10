@@ -794,48 +794,43 @@ def emergency_detail_view(request, emergency_id):
 
     if request.method == "POST":
 
-     # Start Journey
+        # Start Journey
         if "start_journey" in request.POST:
-
             emergency.status = EmergencySOS.Status.ON_THE_WAY
             emergency.updated_at = timezone.now()
             emergency.save()
 
             messages.success(
-            request,
-            "Officer is now on the way."
-        )
+                request,
+                "Officer is now on the way.",
+            )
 
-        return redirect(
-            "portal-emergency-detail",
-            emergency_id=emergency.id,
-        )
+            return redirect(
+                "portal-emergency-detail",
+                emergency_id=emergency.id,
+            )
 
-    # Resolve Emergency
-    if "resolve_emergency" in request.POST:
+        # Resolve Emergency
+        if "resolve_emergency" in request.POST:
+            emergency.status = EmergencySOS.Status.RESOLVED
+            emergency.updated_at = timezone.now()
+            emergency.save()
 
-        emergency.status = EmergencySOS.Status.RESOLVED
-        emergency.updated_at = timezone.now()
-        emergency.save()
+            messages.success(
+                request,
+                "Emergency resolved successfully.",
+            )
 
-        messages.success(
-            request,
-            "Emergency resolved successfully."
-        )
+            return redirect(
+                "portal-emergency-detail",
+                emergency_id=emergency.id,
+            )
 
-        return redirect(
-            "portal-emergency-detail",
-            emergency_id=emergency.id,
-        )
+        # Assign Team
+        form = EmergencyAssignmentForm(request.POST)
 
-    form = EmergencyAssignmentForm(request.POST)
+        if form.is_valid():
 
-    if not form.is_valid():
-         print(form.errors)
-
-    if form.is_valid():
-            print("===== FORM IS VALID =====")
- 
             emergency.team_leader = form.cleaned_data["team_leader"]
             emergency.assigned_officer = form.cleaned_data["team_leader"]
             emergency.patrol_vehicle = form.cleaned_data["patrol_vehicle"]
@@ -847,11 +842,13 @@ def emergency_detail_view(request, emergency_id):
             emergency.updated_at = timezone.now()
 
             emergency.save()
-            
+
+            print("===== STATUS SAVED =====")
+            print(emergency.status)
 
             messages.success(
                 request,
-                "Emergency team assigned successfully."
+                "Emergency team assigned successfully.",
             )
 
             return redirect(
@@ -859,8 +856,10 @@ def emergency_detail_view(request, emergency_id):
                 emergency_id=emergency.id,
             )
 
-    else:
+        else:
+            print(form.errors)
 
+    else:
         form = EmergencyAssignmentForm(
             initial={
                 "team_leader": emergency.team_leader,
@@ -879,12 +878,12 @@ def emergency_detail_view(request, emergency_id):
             "page_summary": "Emergency SOS information",
             "emergency": emergency,
             "assignment_form": form,
-
             "latitude": emergency.latitude,
             "longitude": emergency.longitude,
             "accuracy": emergency.accuracy or 30,
         },
-    ) 
+    )
+
 
 @portal_access_required
 @role_required(PortalRole.ADMIN, PortalRole.POLICE_PARTNER)
@@ -895,10 +894,12 @@ def emergency_live_location(request, emergency_id):
         id=emergency_id,
     )
 
-    return JsonResponse({
-        "latitude": emergency.latitude,
-        "longitude": emergency.longitude,
-        "accuracy": emergency.accuracy,
-        "status": emergency.status,
-        "updated_at": emergency.updated_at.strftime("%d %b %Y %H:%M:%S"),
-    })
+    return JsonResponse(
+        {
+            "latitude": emergency.latitude,
+            "longitude": emergency.longitude,
+            "accuracy": emergency.accuracy,
+            "status": emergency.status,
+            "updated_at": emergency.updated_at.strftime("%d %b %Y %H:%M:%S"),
+        }
+    )

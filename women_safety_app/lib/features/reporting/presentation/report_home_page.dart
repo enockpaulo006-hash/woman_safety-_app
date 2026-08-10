@@ -83,7 +83,7 @@ class _ReportHomePageState extends State<ReportHomePage>
   Timer? _cancelCountdownTimer;
 
   bool _canCancelEmergency = false;
-  Duration _cancelTimeRemaining = const Duration(minutes: 5); 
+  Duration _cancelTimeRemaining = const Duration(minutes: 1); 
 
   String? _emergencyReference;
   String _emergencyStatus = "NONE";
@@ -529,7 +529,7 @@ Future<Map<String, dynamic>> _getHotspotsData() async {
   _isPreparingSos = false;
 
   _canCancelEmergency = true;
-  _cancelTimeRemaining = const Duration(minutes: 5);
+  _cancelTimeRemaining = const Duration(minutes: 1);
 });
 
 _startCancelCountdown();
@@ -1223,18 +1223,15 @@ void _showSuccessSnack(String message) {
             ),
           ),
           const SizedBox(height: 18),
-          Expanded(
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 460),
-                child: AspectRatio(
-                  aspectRatio: heroAspectRatio,
-                  child: _HeroCard(onOpenForm: _openReportForm),
-                ),
-              ),
-            ),
-          ),
+          Align(
+  alignment: Alignment.topCenter,
+  child: ConstrainedBox(
+    constraints: const BoxConstraints(maxWidth: 500),
+    child: _HeroCard(
+      onOpenForm: _openReportForm,
+    ),
+  ),
+),
         ],
       ),
     );
@@ -2514,7 +2511,10 @@ final Duration cancelTimeRemaining;
     !isPreparing && !_hasActiveEmergency;
 
 bool get _assigned =>
-    emergencyStatus != "NEW";
+    emergencyStatus == "OFFICER_ASSIGNED" ||
+    emergencyStatus == "ON_THE_WAY" ||
+    emergencyStatus == "ARRIVED" ||
+    emergencyStatus == "RESOLVED";
 
 bool get _onTheWay =>
     emergencyStatus == "ON_THE_WAY" ||
@@ -3429,31 +3429,90 @@ class _HeroCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
                   Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      OutlinedButton(
-                        onPressed: onOpenForm,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: heroAccent,
-                          backgroundColor: heroButtonColor,
-                          side: BorderSide(
-                            color: Colors.white.withValues(
-                              alpha: isDark ? 0.12 : 0.14,
-                            ),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 22,
-                            vertical: 16,
-                          ),
-                        ),
-                        child: Text(
-                          strings.text('openReportForm'),
-                          style: TextStyle(fontWeight: FontWeight.w800),
-                        ),
-                      ),
-                    ],
-                  ),
+  spacing: 12,
+  runSpacing: 12,
+  children: [
+    OutlinedButton(
+      onPressed: onOpenForm,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: heroAccent,
+        backgroundColor: heroButtonColor,
+        side: BorderSide(
+          color: Colors.white.withValues(
+            alpha: isDark ? 0.12 : 0.14,
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 22,
+          vertical: 16,
+        ),
+      ),
+      child: Text(
+        strings.text('openReportForm'),
+        style: const TextStyle(fontWeight: FontWeight.w800),
+      ),
+    ),
+  ],
+),
+
+const SizedBox(height: 22),
+
+Divider(
+  color: Colors.white.withValues(alpha: 0.12),
+  height: 1,
+),
+
+const SizedBox(height: 18),
+
+Row(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: const Color(0xFFE7A4D6),
+          width: 2,
+        ),
+      ),
+      child: const Icon(
+        Icons.info_outline,
+        color: Color(0xFFE7A4D6),
+        size: 22,
+      ),
+    ),
+
+    const SizedBox(width: 14),
+
+    Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Reporting through Open Report Form",
+            style: textTheme.titleMedium?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          Text(
+            "The information provided is for police analysis and the Gender Desk to improve enforcement decisions. "
+            "For immediate police response and assistance, please use the SOS feature.",
+            style: textTheme.bodySmall?.copyWith(
+              color: Colors.white.withValues(alpha: 0.75),
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    ),
+  ],
+),
                 ],
               ),
             ),

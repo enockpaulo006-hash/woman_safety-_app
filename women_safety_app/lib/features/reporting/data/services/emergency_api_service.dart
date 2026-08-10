@@ -85,7 +85,7 @@ class EmergencyApiService {
   }
 
   /// Fetch current emergency status
-  Future<EmergencyStatusResult> getEmergencyStatus(
+ Future<EmergencyStatusResult> getEmergencyStatus(
     String emergencyId,
   ) async {
     final session = await AuthSessionStore().loadSession();
@@ -180,4 +180,4 @@ class EmergencyApiException implements Exception {
 
   @override
   String toString() => message;
-}
+} 

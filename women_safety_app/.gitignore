@@ -43,3 +43,9 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Django
+*.sqlite3

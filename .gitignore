@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Django
+*.sqlite3
+
+# Flutter/Dart
+.dart_tool/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+

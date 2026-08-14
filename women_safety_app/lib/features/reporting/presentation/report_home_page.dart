@@ -407,8 +407,10 @@ Future<Map<String, dynamic>> _getHotspotsData() async {
     }
 
     return Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
-    );
+   locationSettings: const LocationSettings(
+    accuracy: LocationAccuracy.best,
+    ),
+   );
   }
 
   Future<void> _useCurrentLocation() async {
@@ -465,7 +467,7 @@ Future<Map<String, dynamic>> _getHotspotsData() async {
     });
   }
 
-  Future<void> _activateSosSupport() async {
+Future<void> _activateSosSupport() async {
   final strings = _strings;
 
   if (_isPreparingSos) {
@@ -500,16 +502,14 @@ Future<Map<String, dynamic>> _getHotspotsData() async {
       );
     }
 
-    // Reverse Geocoding
-
+    // Reverse geocoding
     final location =
         await ReverseGeocodingService().getLocationDetails(
       latitude: position.latitude,
       longitude: position.longitude,
     );
 
-    final locationName =
-        location["location_name"] ?? "";
+    final locationName = location["location_name"] ?? "";
 
     debugPrint("===== LOCATION NAME =====");
     debugPrint(locationName);
@@ -521,36 +521,38 @@ Future<Map<String, dynamic>> _getHotspotsData() async {
       locationName: locationName,
     );
 
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     setState(() {
- _emergencyReference = result.id;
-  _emergencyStatus = result.status;
-  _isPreparingSos = false;
+      _emergencyReference = result.id;
+      _emergencyStatus = result.status;
+      _isPreparingSos = false;
 
-  _canCancelEmergency = true;
-  _cancelTimeRemaining = const Duration(minutes: 1);
-});
+      _canCancelEmergency = true;
+      _cancelTimeRemaining = const Duration(minutes: 5);
+    });
 
-_startCancelCountdown();
+    _startCancelCountdown();
 
     _emergencyStatusTimer?.cancel();
 
     // Get the latest status immediately.
     await _refreshEmergencyStatus();
 
-// Continue checking every 5 seconds.
-_emergencyStatusTimer = Timer.periodic(
-  const Duration(seconds: 5),
-  (_) {
-    _refreshEmergencyStatus();
-  },
-);
+    // Continue checking every 5 seconds.
+    _emergencyStatusTimer = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) {
+        _refreshEmergencyStatus();
+      },
+    );
 
     _showSuccessSnack(
       "Emergency SOS sent successfully.",
     );
-  } catch (_) {
+  } catch (error) {
     if (!mounted) {
       return;
     }
@@ -559,11 +561,14 @@ _emergencyStatusTimer = Timer.periodic(
       _isPreparingSos = false;
     });
 
+    debugPrint("===== SOS ACTIVATION ERROR =====");
+    debugPrint(error.toString());
+
     _showErrorSnack(
       strings.text("sosActivationFailed"),
     );
   }
-  }
+}
 
 Future<void> _refreshEmergencyStatus() async {
   if (_emergencyReference == null) {

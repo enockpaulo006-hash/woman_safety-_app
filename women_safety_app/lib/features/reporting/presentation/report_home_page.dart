@@ -547,17 +547,32 @@ Future<void> _activateSosSupport() async {
       longitude: position.longitude,
     );
 
-    final locationName = location["location_name"] ?? "";
+          final region = location["region"] ?? "";
+      final district = location["district"] ?? "";
+      final ward = location["ward"] ?? "";
+      final village = location["village"] ?? "";
+      final street = location["street"] ?? "";
+      final locationName = location["location_name"] ?? "";
 
-    debugPrint("===== LOCATION NAME =====");
-    debugPrint(locationName);
+      debugPrint("===== LOCATION DETAILS =====");
+      debugPrint("Region: $region");
+      debugPrint("District: $district");
+      debugPrint("Ward: $ward");
+      debugPrint("Village: $village");
+      debugPrint("Street: $street");
+      debugPrint("Full Location: $locationName");
 
-    final result =
-        await EmergencyApiService().sendEmergencySOS(
-      latitude: position.latitude,
-      longitude: position.longitude,
-      locationName: locationName,
-    );
+      final result =
+          await EmergencyApiService().sendEmergencySOS(
+            latitude: position.latitude,
+            longitude: position.longitude,
+            locationName: locationName,
+            region: region,
+            district: district,
+            ward: ward,
+            village: village,
+            street: street,
+          );
 
     if (!mounted) {
       return;

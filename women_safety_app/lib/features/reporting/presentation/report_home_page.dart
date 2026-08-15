@@ -483,6 +483,12 @@ Future<void> _activateSosSupport() async {
   try {
     position = await _captureCurrentPosition();
 
+    debugPrint("===== FRESH GPS POSITION =====");
+    debugPrint("Latitude: ${position.latitude}");
+    debugPrint("Longitude: ${position.longitude}");
+    debugPrint("Accuracy: ${position.accuracy}");
+    debugPrint("Timestamp: ${position.timestamp}");
+
     if (!mounted) {
       return;
     }

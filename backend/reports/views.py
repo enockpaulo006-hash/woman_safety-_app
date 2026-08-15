@@ -103,6 +103,18 @@ class EmergencySOSCreateAPIView(APIView):
                 "reference_number": emergency.reference_number,
                 "status": emergency.status,
                 "message": "Emergency SOS sent successfully.",
+
+                "location": {
+                    "latitude": emergency.latitude,
+                    "longitude": emergency.longitude,
+                    "accuracy": emergency.accuracy,
+                    "region": emergency.region,
+                    "district": emergency.district,
+                    "ward": emergency.ward,
+                    "village": emergency.village,
+                    "street": emergency.street,
+                    "location_name": emergency.location_name,
+                },
             },
             status=status.HTTP_201_CREATED,
         )

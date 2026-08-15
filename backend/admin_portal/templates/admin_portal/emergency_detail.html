@@ -26,8 +26,54 @@
 
 
 <div class="detail-row">
-<span>Location</span>
-<strong>{{ emergency.location_name|default:"Unknown Location" }}</strong>
+    <span>Region</span>
+    <strong>{{ emergency.region|default:"Not available" }}</strong>
+</div>
+
+<div class="detail-row">
+    <span>District</span>
+    <strong>{{ emergency.district|default:"Not available" }}</strong>
+</div>
+
+<div class="detail-row">
+    <span>Ward</span>
+    <strong>{{ emergency.ward|default:"Not available" }}</strong>
+</div>
+
+<div class="detail-row">
+    <span>Village</span>
+    <strong>{{ emergency.village|default:"Not available" }}</strong>
+</div>
+
+<div class="detail-row">
+    <span>Street</span>
+    <strong>{{ emergency.street|default:"Not available" }}</strong>
+</div>
+
+<div class="detail-row">
+    <span>Full Location</span>
+    <strong>{{ emergency.location_name|default:"Not available" }}</strong>
+</div>
+
+<div class="detail-row">
+    <span>Latitude</span>
+    <strong>{{ emergency.latitude }}</strong>
+</div>
+
+<div class="detail-row">
+    <span>Longitude</span>
+    <strong>{{ emergency.longitude }}</strong>
+</div>
+
+<div class="detail-row">
+    <span>GPS Accuracy</span>
+    <strong>
+        {% if emergency.accuracy %}
+            {{ emergency.accuracy|floatformat:1 }} meters
+        {% else %}
+            Not available
+        {% endif %}
+    </strong>
 </div>
 
 <div class="detail-row">

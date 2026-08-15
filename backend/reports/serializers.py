@@ -122,43 +122,118 @@ class IncidentReportCreateSerializer(serializers.Serializer):
 class EmergencySOSCreateSerializer(serializers.Serializer):
     latitude = serializers.FloatField()
     longitude = serializers.FloatField()
-    accuracy = serializers.FloatField(required=False, allow_null=True)
+
+    accuracy = serializers.FloatField(
+        required=False,
+        allow_null=True,
+    )
+
     phone_number = serializers.CharField(
         required=False,
         allow_blank=True,
         allow_null=True,
         max_length=20,
     )
-    
+
     location_name = serializers.CharField(
-    required=False,
-    allow_blank=True,
-    allow_null=True,
-    max_length=255,
- )
-    
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        max_length=255,
+    )
+
+    region = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        max_length=100,
+    )
+
+    district = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        max_length=100,
+    )
+
+    ward = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        max_length=100,
+    )
+
+    village = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        max_length=150,
+    )
+
+    street = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        max_length=150,
+    )
+
     def create(self, validated_data):
         request = self.context["request"]
+
         now = timezone.now()
+
         reference_number = (
             f"SOS-{now:%Y%m%d}-"
             f"{uuid.uuid4().hex[:6].upper()}"
         )
-        
+
         emergency = EmergencySOS.objects.create(
-             id=uuid.uuid4(),
-             reference_number=reference_number,
-             phone_number=validated_data.get("phone_number"),
-             location_name=validated_data.get("location_name"),
-             latitude=validated_data["latitude"],
-             longitude=validated_data["longitude"],
-             accuracy=validated_data.get("accuracy"),
-             status=EmergencySOS.Status.NEW,
-             created_at=now,
-             updated_at=now,
-             is_active=True,
+            id=uuid.uuid4(),
+            reference_number=reference_number,
+
+            phone_number=validated_data.get(
+                "phone_number"
+            ),
+
+            location_name=validated_data.get(
+                "location_name"
+            ),
+
+            region=validated_data.get(
+                "region"
+            ),
+
+            district=validated_data.get(
+                "district"
+            ),
+
+            ward=validated_data.get(
+                "ward"
+            ),
+
+            village=validated_data.get(
+                "village"
+            ),
+
+            street=validated_data.get(
+                "street"
+            ),
+
+            latitude=validated_data["latitude"],
+            longitude=validated_data["longitude"],
+
+            accuracy=validated_data.get(
+                "accuracy"
+            ),
+
+            status=EmergencySOS.Status.NEW,
+
+            created_at=now,
+            updated_at=now,
+
+            is_active=True,
         )
-        
+
         EmergencyStatusHistory.objects.create(
             id=uuid.uuid4(),
             emergency=emergency,
@@ -168,4 +243,5 @@ class EmergencySOSCreateSerializer(serializers.Serializer):
             changed_by=request.user.username,
             changed_at=now,
         )
+
         return emergency

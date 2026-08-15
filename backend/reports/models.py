@@ -134,15 +134,67 @@ class EmergencySOS(models.Model):
         RESOLVED = "RESOLVED", "Resolved"
         CANCELLED = "CANCELLED", "Cancelled"
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    reference_number = models.CharField(max_length=30, unique=True)
-    phone_number = models.CharField(max_length=20, blank=True, null=True)
-    location_name = models.CharField( max_length=255, blank=True, null=True,)
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+    )
 
+    reference_number = models.CharField(
+        max_length=30,
+        unique=True,
+    )
+
+    phone_number = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+    )
+
+    location_name = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+    )
+
+    region = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+    )
+
+    district = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+    )
+
+    ward = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+    )
+
+    village = models.CharField(
+        max_length=150,
+        blank=True,
+        null=True,
+    )
+
+    street = models.CharField(
+        max_length=150,
+        blank=True,
+        null=True,
+    )
 
     latitude = models.FloatField()
+
     longitude = models.FloatField()
-    accuracy = models.FloatField(blank=True, null=True)
+
+    accuracy = models.FloatField(
+        blank=True,
+        null=True,
+    )
 
     status = models.CharField(
         max_length=30,
@@ -155,49 +207,56 @@ class EmergencySOS(models.Model):
         blank=True,
         null=True,
     )
-    
+
     team_leader = models.CharField(
-    max_length=150,
-    blank=True,
-    null=True,
+        max_length=150,
+        blank=True,
+        null=True,
     )
 
     patrol_vehicle = models.CharField(
-    max_length=50,
-    blank=True,
-    null=True,
+        max_length=50,
+        blank=True,
+        null=True,
     )
 
     officer_count = models.PositiveIntegerField(
-    blank=True,
-    null=True,
+        blank=True,
+        null=True,
     )
 
     dispatch_notes = models.TextField(
-    blank=True,
-    null=True,
+        blank=True,
+        null=True,
     )
 
     assigned_at = models.DateTimeField(
-    blank=True,
-    null=True,
+        blank=True,
+        null=True,
     )
 
     dispatched_at = models.DateTimeField(
-    blank=True,
-    null=True,
+        blank=True,
+        null=True,
     )
 
     arrived_at = models.DateTimeField(
-    blank=True,
-    null=True,
+        blank=True,
+        null=True,
     )
 
     created_at = models.DateTimeField()
-    updated_at = models.DateTimeField()
-    resolved_at = models.DateTimeField(blank=True, null=True)
 
-    is_active = models.BooleanField(default=True)
+    updated_at = models.DateTimeField()
+
+    resolved_at = models.DateTimeField(
+        blank=True,
+        null=True,
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+    )
 
     class Meta:
         db_table = "emergency_sos"

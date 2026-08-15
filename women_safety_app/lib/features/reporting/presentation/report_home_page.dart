@@ -384,66 +384,62 @@ Future<Map<String, dynamic>> _getHotspotsData() async {
   }
 
       Future<Position> _captureCurrentPosition() async {
-      final strings = _strings;
+  final strings = _strings;
 
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+  final serviceEnabled =
+      await Geolocator.isLocationServiceEnabled();
 
-      if (!serviceEnabled) {
-        throw _LocationCaptureException(
-          strings.text('locationServiceOff'),
-        );
-      }
+  if (!serviceEnabled) {
+    throw _LocationCaptureException(
+      strings.text('locationServiceOff'),
+    );
+  }
 
-      var permission = await Geolocator.checkPermission();
+  var permission = await Geolocator.checkPermission();
 
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
+  if (permission == LocationPermission.denied) {
+    permission = await Geolocator.requestPermission();
+  }
 
-      if (permission == LocationPermission.denied) {
-        throw _LocationCaptureException(
-          strings.text('locationPermissionDenied'),
-        );
-      }
+  if (permission == LocationPermission.denied) {
+    throw _LocationCaptureException(
+      strings.text('locationPermissionDenied'),
+    );
+  }
 
-      if (permission == LocationPermission.deniedForever) {
-        throw _LocationCaptureException(
-          strings.text('locationPermissionForever'),
-        );
-      }
+  if (permission == LocationPermission.deniedForever) {
+    throw _LocationCaptureException(
+      strings.text('locationPermissionForever'),
+    );
+  }
 
-      try {
-        final position = await Geolocator.getPositionStream(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.bestForNavigation,
-            distanceFilter: 0,
-          ),
-        )
-            .where((position) {
-              return position.accuracy <= 50;
-            })
-            .first
-            .timeout(
-              const Duration(seconds: 30),
-            );
+  try {
+    final position = await Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.best,
+        distanceFilter: 0,
+      ),
+    ).timeout(
+      const Duration(seconds: 30),
+    );
 
-        debugPrint("===== VERIFIED GPS POSITION =====");
-        debugPrint("Latitude: ${position.latitude}");
-        debugPrint("Longitude: ${position.longitude}");
-        debugPrint("Accuracy: ${position.accuracy}");
-        debugPrint("Timestamp: ${position.timestamp}");
+    debugPrint("===== CURRENT GPS POSITION =====");
+    debugPrint("Latitude: ${position.latitude}");
+    debugPrint("Longitude: ${position.longitude}");
+    debugPrint("Accuracy: ${position.accuracy}");
+    debugPrint("Timestamp: ${position.timestamp}");
 
-        return position;
-      } catch (error) {
-        debugPrint("===== GPS CAPTURE ERROR =====");
-        debugPrint(error.toString());
+    return position;
+  } catch (error) {
+    debugPrint("===== GPS CAPTURE ERROR =====");
+    debugPrint(error.toString());
 
-        throw _LocationCaptureException(
-          "Unable to get an accurate current location. "
-          "Please make sure GPS is enabled and try again.",
-        );
-      }
-    }
+    throw _LocationCaptureException(
+      "Unable to get your current location. "
+      "Please make sure GPS is enabled and try again.",
+    );
+  }
+}
 
   Future<void> _useCurrentLocation() async {
     final strings = _strings;
@@ -584,7 +580,7 @@ Future<void> _activateSosSupport() async {
       _isPreparingSos = false;
 
       _canCancelEmergency = true;
-      _cancelTimeRemaining = const Duration(minutes: 5);
+      _cancelTimeRemaining = const Duration(minutes: 1);
     });
 
     _startCancelCountdown();

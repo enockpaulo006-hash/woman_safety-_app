@@ -339,7 +339,7 @@ Future<Map<String, dynamic>> _getHotspotsData() async {
     if (section == _currentSection) {
       return;
     }
-
+ 
     setState(() {
       if (rememberHistory) {
         _sectionHistory.remove(section);

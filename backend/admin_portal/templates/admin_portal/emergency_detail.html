@@ -1,5 +1,192 @@
 {% extends "admin_portal/base.html" %}
 
+{% block extra_head %}
+{{ block.super }}
+<style>
+.live-tracking-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+.live-tracking-header-status,
+.live-tracking-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #166534;
+    background: #dcfce7;
+    border: 1px solid #bbf7d0;
+    border-radius: 999px;
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .04em;
+}
+.live-tracking-header-status.is-resolved,
+.live-tracking-state.is-resolved {
+    color: #475569;
+    background: #f1f5f9;
+    border-color: #e2e8f0;
+}
+.live-tracking-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: #22c55e;
+    box-shadow: 0 0 0 5px rgba(34, 197, 94, .16);
+}
+.live-tracking-header-status.is-resolved .live-tracking-dot,
+.live-tracking-state.is-resolved .live-tracking-dot {
+    background: #94a3b8;
+    box-shadow: none;
+}
+.live-tracking-body {
+    padding: 0;
+    overflow: hidden;
+}
+.live-tracking-console {
+    min-height: 100%;
+    display: grid;
+    grid-template-columns: 190px minmax(0, 1fr);
+    background: #f8fafc;
+}
+.live-tracking-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 22px;
+    border-right: 1px solid #e2e8f0;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+.live-tracking-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+.live-tracking-metric > span:first-child {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+.live-tracking-metric > strong,
+.live-tracking-metric > span:last-child:not(.live-tracking-state) {
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 800;
+    word-break: break-word;
+}
+.live-tracking-state span:last-child {
+    color: inherit;
+    font-size: 12px;
+}
+.live-tracking-center-btn {
+    margin-top: auto;
+    border: 0;
+    border-radius: 10px;
+    background: #0f172a;
+    color: #ffffff;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 14px;
+    font-weight: 800;
+}
+.live-tracking-center-btn:hover {
+    background: #1e293b;
+}
+.live-tracking-map-shell {
+    position: relative;
+    min-height: 430px;
+    overflow: hidden;
+    background: #dbeafe;
+}
+#live-tracking-map {
+    width: 100%;
+    height: 100%;
+    min-height: 430px;
+}
+.live-tracking-map-label {
+    position: absolute;
+    left: 18px;
+    bottom: 18px;
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(15, 23, 42, .88);
+    color: #ffffff;
+    box-shadow: 0 14px 32px rgba(15, 23, 42, .24);
+    backdrop-filter: blur(8px);
+}
+.live-tracking-map-label i {
+    color: #f97316;
+}
+.live-tracking-map-label strong {
+    display: block;
+    font-size: 13px;
+}
+.live-tracking-map-label span {
+    display: block;
+    color: #cbd5e1;
+    font-size: 12px;
+}
+.live-tracking-pin {
+    position: relative;
+}
+.live-tracking-pin-core {
+    position: absolute;
+    left: 7px;
+    top: 2px;
+    width: 24px;
+    height: 24px;
+    border: 4px solid #ffffff;
+    border-radius: 50% 50% 50% 0;
+    background: #ef4444;
+    box-shadow: 0 10px 22px rgba(239, 68, 68, .35);
+    transform: rotate(-45deg);
+}
+.live-tracking-pin-core::after {
+    content: "";
+    position: absolute;
+    inset: 6px;
+    border-radius: 999px;
+    background: #ffffff;
+}
+.live-tracking-pin-pulse {
+    position: absolute;
+    left: 2px;
+    top: 28px;
+    width: 34px;
+    height: 12px;
+    border-radius: 999px;
+    background: rgba(239, 68, 68, .18);
+}
+@media (max-width: 760px) {
+    .live-tracking-card-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+    .live-tracking-console {
+        grid-template-columns: 1fr;
+    }
+    .live-tracking-sidebar {
+        border-right: 0;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .live-tracking-map-shell,
+    #live-tracking-map {
+        min-height: 340px;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
 
 <div class="emergency-detail-grid">
@@ -181,43 +368,60 @@
 </div>
 
 <div class="portal-card">
-
-<div class="portal-card-header">
+<div class="portal-card-header live-tracking-card-header">
 <h2>Live Tracking</h2>
+<span class="live-tracking-header-status" id="live-header-status">
+    <span class="live-tracking-dot"></span>
+    <span id="live-header-status-text">Connecting...</span>
+</span>
 </div>
-
-<div class="portal-card-body">
-
+<div class="portal-card-body live-tracking-body">
 <div
     id="live-tracking"
+    class="live-tracking-console"
     data-url="{% url 'emergency_live_location' emergency.id %}">
-
-    <p>
-        <strong>Status:</strong>
-        <span id="live-status">
-            Connecting...
-        </span>
-    </p>
-
-    <p>
-        <strong>Latitude:</strong>
-        <span id="live-latitude">--</span>
-    </p>
-
-    <p>
-        <strong>Longitude:</strong>
-        <span id="live-longitude">--</span>
-    </p>
-
-    <p>
-        <strong>Last Update:</strong>
-        <span id="live-updated">--</span>
-    </p>
-
+    <div class="live-tracking-sidebar">
+        <div class="live-tracking-metric">
+            <span>Status</span>
+            <span class="live-tracking-state" id="live-status">
+                <span class="live-tracking-dot"></span>
+                <span id="live-status-text">Connecting...</span>
+            </span>
+        </div>
+        <div class="live-tracking-metric">
+            <span>Latitude</span>
+            <strong id="live-latitude">--</strong>
+        </div>
+        <div class="live-tracking-metric">
+            <span>Longitude</span>
+            <strong id="live-longitude">--</strong>
+        </div>
+        <div class="live-tracking-metric">
+            <span>Last Update</span>
+            <strong id="live-updated">--</strong>
+        </div>
+        <button
+            type="button"
+            class="live-tracking-center-btn"
+            id="live-center-map">
+            <i class="bi bi-crosshair"></i>
+            Center
+        </button>
+    </div>
+    <div class="live-tracking-map-shell">
+        <div id="live-tracking-map"></div>
+        <div class="live-tracking-map-label">
+            <i class="bi bi-geo-alt-fill"></i>
+            <div>
+                <strong>Reporter Location</strong>
+                <span id="live-map-coordinates">
+                    Waiting for coordinates
+                </span>
+            </div>
+        </div>
+    </div>
 </div>
-
 </div>
-
 </div>
 
 </div>
@@ -225,19 +429,15 @@
 {% endblock %}
 
 {% block extra_scripts %}
-
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-
     const latitude = {{ latitude }};
     const longitude = {{ longitude }};
     const accuracy = {{ accuracy }};
-
     const map = L.map("emergency-map").setView(
         [latitude, longitude],
         17
     );
-
     L.tileLayer(
     "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
     {
@@ -246,20 +446,17 @@ document.addEventListener("DOMContentLoaded", function () {
         maxZoom: 20
     }
 ).addTo(map);;
-
     // Emergency marker
     const emergencyMarker = L.marker([
     latitude,
     longitude
 ]).addTo(map);
-
 emergencyMarker.bindPopup(`
     <b>🚨 Emergency SOS</b><br>
     <strong>Reference:</strong> {{ emergency.reference_number }}<br>
     <strong>Status:</strong> {{ emergency.status }}<br>
     <strong>Location:</strong> {{ emergency.location_name }}
 `).openPopup();
-
     // GPS accuracy circle
     const accuracyCircle = L.circle(
     [latitude, longitude],
@@ -271,67 +468,123 @@ emergencyMarker.bindPopup(`
         weight: 2,
     }
 ).addTo(map);
-
+    const liveMap = L.map("live-tracking-map", {
+        zoomControl: true,
+        scrollWheelZoom: true,
+    }).setView([latitude, longitude], 17);
+    L.tileLayer(
+        "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+        {
+            attribution: "&copy; OpenStreetMap contributors &copy; CARTO",
+            subdomains: "abcd",
+            maxZoom: 20
+        }
+    ).addTo(liveMap);
+    const liveMarkerIcon = L.divIcon({
+        className: "live-tracking-pin",
+        html: '<span class="live-tracking-pin-core"></span><span class="live-tracking-pin-pulse"></span>',
+        iconSize: [38, 46],
+        iconAnchor: [19, 42],
+        popupAnchor: [0, -40],
+    });
+    const liveMarker = L.marker([latitude, longitude], {
+        icon: liveMarkerIcon,
+        title: "Reporter Location",
+    }).addTo(liveMap);
+    liveMarker.bindPopup("Reporter Location").openPopup();
+    const liveAccuracyCircle = L.circle(
+        [latitude, longitude],
+        {
+            radius: accuracy || 30,
+            color: "#2563eb",
+            fillColor: "#60a5fa",
+            fillOpacity: 0.14,
+            weight: 2,
+        }
+    ).addTo(liveMap);
+    const liveCenterButton = document.getElementById("live-center-map");
+    let latestLiveLocation = [latitude, longitude];
+    const setLiveStatus = (status) => {
+        const isActive = status === "ACTIVE";
+        const statusText = isActive ? "LIVE" : (status || "UNKNOWN");
+        const statusNodes = [
+            document.getElementById("live-header-status"),
+            document.getElementById("live-status"),
+        ];
+        document.getElementById("live-header-status-text").textContent =
+            statusText;
+        document.getElementById("live-status-text").textContent =
+            statusText;
+        statusNodes.forEach((node) => {
+            node.classList.toggle("is-resolved", !isActive);
+        });
+    };
+    liveCenterButton.addEventListener("click", function () {
+        liveMap.setView(latestLiveLocation, 17, {
+            animate: true,
+        });
+        liveMarker.openPopup();
+    });
 async function updateLiveTracking() {
-
     try {
-
         const liveUrl = document
          .getElementById("live-tracking")
          .dataset.url;
-
         const response = await fetch(liveUrl);
-
         const data = await response.json();
-
-        document.getElementById("live-status").textContent =
-            data.status;
-
+        const liveLatitude = Number(data.latitude);
+        const liveLongitude = Number(data.longitude);
+        if (!Number.isFinite(liveLatitude) || !Number.isFinite(liveLongitude)) {
+            return;
+        }
+        setLiveStatus(data.status);
         document.getElementById("live-latitude").textContent =
-            data.latitude.toFixed(6);
-
+            liveLatitude.toFixed(6);
         document.getElementById("live-longitude").textContent =
-            data.longitude.toFixed(6);
-
+            liveLongitude.toFixed(6);
         document.getElementById("live-updated").textContent =
             data.updated_at;
-
+        document.getElementById("live-map-coordinates").textContent =
+            `${liveLatitude.toFixed(6)}, ${liveLongitude.toFixed(6)}`;
         const newLocation = [
-            data.latitude,
-            data.longitude
+            liveLatitude,
+            liveLongitude
         ];
-
+        latestLiveLocation = newLocation;
         emergencyMarker.setLatLng(newLocation);
-
         accuracyCircle.setLatLng(newLocation);
-
         accuracyCircle.setRadius(
             data.accuracy || 30
         );
-
         map.panTo(newLocation);
-
+        liveMarker.setLatLng(newLocation);
+        liveAccuracyCircle.setLatLng(newLocation);
+        liveAccuracyCircle.setRadius(
+            data.accuracy || 30
+        );
+        liveMap.panTo(newLocation);
+        liveMarker.openPopup();
     }
-
     catch (error) {
-
         console.error(
             "Live tracking failed:",
             error
         );
-
     }
-
 }
-
+requestAnimationFrame(function () {
+    map.invalidateSize();
+    liveMap.invalidateSize();
+});
+setTimeout(function () {
+    map.invalidateSize();
+    liveMap.invalidateSize();
+}, 250);
 updateLiveTracking();
-
 setInterval(
     updateLiveTracking,
     5000
 );
-
 });
 </script>
-
 {% endblock %}

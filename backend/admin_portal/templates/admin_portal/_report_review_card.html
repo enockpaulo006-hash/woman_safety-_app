@@ -121,11 +121,11 @@
             </a>
         </div>
         <small class="portal-map-note">
-            Red pin marks the incident point. The circle shows the nearby area around {{ report.approx_area_name|default:report.ward_or_district|default:"this location" }}.
+            Red pin marks the incident point. The circle shows the nearby area around  {{ report.approx_area_name|default:report.ward_or_district|default:"this location" }}.
         </small>
         {% else %}
         <div class="portal-report-mini-map portal-report-mini-map-empty">
-            <span>No GPS point was submitted for this report.</span>
+            <span>No any GPS point was submitted for this report.</span>
         </div>
         {% endif %}
     </aside>
